@@ -1,5 +1,4 @@
 //=============================================================================================
-// Mintaprogram: Zöld háromszög. Ervenyes 2018. osztol.
 //
 // A beadott program csak ebben a fajlban lehet, a fajl 1 byte-os ASCII karaktereket tartalmazhat, BOM kihuzando.
 // Tilos:
@@ -32,7 +31,6 @@
 // negativ elojellel szamoljak el es ezzel parhuzamosan eljaras is indul velem szemben.
 //=============================================================================================
 #include "framework.h"
-#include <algorithm>  
 // vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
 const char * const vertexSource = R"(
 	#version 330				// Shader 3.3
@@ -279,10 +277,14 @@ public:
 	}
 };
 
-bool compareVec4ByX(const vec4& v1, const vec4& v2)
-{
-	return v1.x < v2.x;
-	//return (((vec4*)v1)->x < ((vec4*)v2)->x);
+int compareVec4ByX(const void* v1, const void* v2){
+	int x1 = ((vec4*)v1)->x;
+	int x2 = ((vec4*)v2)->x;
+	if (x2 > x1)
+		return 1;
+	if (x2 == x1)
+		return 0;
+	return -1;
 }
 class Kochanek_Bartels : public Curve {
 	std::vector<float> ts;  // knots
@@ -304,8 +306,7 @@ public:
 	void AddControlPoint(float cX, float cY) {
 		ts.push_back((float)wCtrlPoints.size());
 		Curve::AddControlPoint(cX, cY);
-	//	std::qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
-		std::sort(wCtrlPoints.begin(), wCtrlPoints.end(), compareVec4ByX);
+		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
 	}
 	float tStart() { return ts[0]; }
 	float tEnd() { return ts[wCtrlPoints.size() - 1]; }
