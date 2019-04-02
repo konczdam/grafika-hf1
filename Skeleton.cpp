@@ -17,8 +17,8 @@
 //
 // NYILATKOZAT
 // ---------------------------------------------------------------------------------------------
-// Nev    : 
-// Neptun : 
+// Nev    : Koncz Adam
+// Neptun : MOENI1
 // ---------------------------------------------------------------------------------------------
 // ezennel kijelentem, hogy a feladatot magam keszitettem, es ha barmilyen segitseget igenybe vettem vagy
 // mas szellemi termeket felhasznaltam, akkor a forrast es az atvett reszt kommentekben egyertelmuen jeloltem.
@@ -362,8 +362,11 @@ float KochanekBartelsSpline::H2(float s) {
 float KochanekBartelsSpline::H3(float s) {
 	return s*s*s - s*s;
 }
+
 LineStrip lineStrip;
 KochanekBartelsSpline* kb;
+
+
 // Initialization, create an OpenGL context
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
