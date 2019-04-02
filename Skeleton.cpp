@@ -84,15 +84,18 @@ const char * fragmentSourceForBackground = R"(
 	 vec2 actual;
 	 vec2 rightside;
 	 vec2 twoToTheRight;
-     vec2 controlPoints[7]=vec2[7](
-		vec2(-1.30,0.75),
-		vec2(-1.0,0.75),
-		vec2(-0.60,0.95),
-		vec2(0.15,0.625),
-		vec2(0.687,0.70),
-		vec2(1.1001,0.76),
-		vec2(1.14,0.76)
-);
+	    vec2 controlPoints[8]=vec2[8](
+		vec2(-0.1, 0.6),
+		vec2(0.2, 0.7),
+		vec2(0.4,0.6),
+		vec2(0.6,0.9),
+		vec2(0.8,0.65),
+		vec2(1,0.4),
+		vec2(1.2,0.6),
+		vec2(1.4, 0.6)
+		
+);	
+
 	in vec2 texCoord;			// variable input: interpolated texture coordinates
 	out vec4 outColor;		// output that goes to the raster memory as told by glBindFragDataLocation
 
@@ -110,12 +113,12 @@ float H3(float s) {
 }
 	bool isHill(vec2 Coord){
 		float y = 0;
-		for(int i = 1; i < 5; i++){
+		for(int i = 1; i < 7; i++){
 			if(controlPoints[i].x > Coord.x){
-				leftside = controlPoints[i-1];
-				actual = controlPoints[i];
-				rightside = controlPoints[i+1];
-				twoToTheRight = controlPoints[i+2];
+				leftside = controlPoints[i-2];
+				actual = controlPoints[i-1];
+				rightside = controlPoints[i];
+				twoToTheRight = controlPoints[i+1];
 				break;
 			}
 		}
@@ -136,7 +139,7 @@ float H3(float s) {
 		if (isHill(texCoord)) {
 			outColor = vec4(0.0,0.0,1.0,1.0); 
 		} else {
-			outColor = vec4(159/256.0f, 207/256.0f, 230/256.0f, 0.98f);
+			outColor = vec4(159/255.0f, 207/255.0f, 230/255.0f, 0.98f);
 		}
 	}
 )";
@@ -408,11 +411,11 @@ public:
 	}
 };
 
-
+TexturedQuad quad;
 
 // Initialization, create an OpenGL context
 void onInitialization() {
-
+	quad.Create();
 
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(2.0f); // Width of lines in pixels
@@ -462,7 +465,9 @@ void onDisplay() {
 	
 	glBindVertexArray(vao);  // Draw call
 	//glDrawArrays(GL_TRIANGLES, 0 /*startIdx*/, 3 /*# Elements*/);
-	
+	backGroundMaker.Use();
+	quad.Draw();
+	gpuProgram.Use();
 	kb->Draw();
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
