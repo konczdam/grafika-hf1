@@ -57,7 +57,92 @@ const char * const fragmentSource = R"(
 	}
 )";
 
+const char * vertexSourceForBackground = R"(
+	#version 330
+    precision highp float;
+
+	uniform mat4 MVP;			// Model-View-Projection matrix in row-major format
+
+	layout(location = 0) in vec2 vertexPosition;	// Attrib Array 0
+	layout(location = 1) in vec2 vertexUV;			// Attrib Array 1
+
+	out vec2 texCoord;								// output attribute
+
+	void main() {
+		texCoord = vertexUV;														// copy texture coordinates
+		gl_Position = vec4(vertexPosition.x, vertexPosition.y, 0, 1) * MVP; 		// transform to clipping space
+	}
+)";
+
+const char * fragmentSourceForBackground = R"(
+	
+	#version 330
+    precision highp float;
+	
+	uniform float tension = 0.85f;
+	 vec2 leftside;
+	 vec2 actual;
+	 vec2 rightside;
+	 vec2 twoToTheRight;
+     vec2 controlPoints[7]=vec2[7](
+		vec2(-1.30,0.75),
+		vec2(-1.0,0.75),
+		vec2(-0.60,0.95),
+		vec2(0.15,0.625),
+		vec2(0.687,0.70),
+		vec2(1.1001,0.76),
+		vec2(1.14,0.76)
+);
+	in vec2 texCoord;			// variable input: interpolated texture coordinates
+	out vec4 outColor;		// output that goes to the raster memory as told by glBindFragDataLocation
+
+float H0(float s) {
+		return 2*s*s*s - 3*s*s + 1;
+}
+float H1(float s) {
+	return -2 * s*s*s + 3 * s*s ;
+}
+float H2(float s) {
+	return  s*s*s - 2 * s*s + s;
+}
+float H3(float s) {
+	return s*s*s - s*s;
+}
+	bool isHill(vec2 Coord){
+		float y = 0;
+		for(int i = 1; i < 5; i++){
+			if(controlPoints[i].x > Coord.x){
+				leftside = controlPoints[i-1];
+				actual = controlPoints[i];
+				rightside = controlPoints[i+1];
+				twoToTheRight = controlPoints[i+2];
+				break;
+			}
+		}
+		float deltaI = rightside.x - actual.x;
+		float TiI = ((1 - tension) / 2)*(twoToTheRight.y - rightside.y) + ((1 - tension)/ 2)*(rightside.y - actual.y);
+		float TiO = ((1 - tension)/ 2)*(rightside.y - actual.y) + ((1 - tension)/ 2)*(actual.y - leftside.y);
+		y = H0((Coord.x - actual.x) / deltaI) * actual.y;
+		y += H1((Coord.x - actual.x) / deltaI) * rightside.y;
+		y += H2((Coord.x - actual.x) / deltaI) * TiO;
+		y += H3((Coord.x - actual.x) / deltaI) * TiI ;
+		if(y > Coord.y)
+			return true;
+		return false;
+	}
+
+
+	void main() {
+		if (isHill(texCoord)) {
+			outColor = vec4(0.0,0.0,1.0,1.0); 
+		} else {
+			outColor = vec4(159/256.0f, 207/256.0f, 230/256.0f, 0.98f);
+		}
+	}
+)";
+
 GPUProgram gpuProgram; // vertex and fragment shaders
+GPUProgram backGroundMaker;
 unsigned int vao;	   // virtual world on the GPU
 
 class Camera2D {
@@ -78,88 +163,6 @@ public:
 
 Camera2D camera;		// 2D camera
 
-
-class LineStrip {
-	GLuint				vao, vbo;	// vertex array object, vertex buffer object
-	std::vector<float>  vertexData; // interleaved data of coordinates and colors
-	vec2			    wTranslate;
-public:
-	void Create() {
-		glGenVertexArrays(1, &vao);
-		glBindVertexArray(vao);
-
-		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0
-		glEnableVertexAttribArray(1);  // attribute array 1
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
-		// Map attribute array 1 to the color data of the interleaved vbo
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
-
-		vertexData.push_back(-10.0f);
-		vertexData.push_back(-3.2f);
-		vertexData.push_back(1); // red
-		vertexData.push_back(1); // green
-		vertexData.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-
-
-
-		vertexData.push_back(10.0f);
-		vertexData.push_back(-3.2f);
-		vertexData.push_back(1); // red
-		vertexData.push_back(1); // green
-		vertexData.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-	}
-
-
-	mat4 M() {
-		return mat4(1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			wTranslate.x, wTranslate.y, 0, 1); // translation
-	}
-	mat4 Minv() {
-		return mat4(1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			-wTranslate.x, -wTranslate.y, 0, 1); // inverse translation
-	}
-
-	void AddPoint(float cX, float cY) {
-		// input pipeline
-		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv() * Minv();
-		// fill interleaved data
-		vertexData.push_back(wVertex.x);
-		vertexData.push_back(wVertex.y);
-		vertexData.push_back(1); // red
-		vertexData.push_back(1); // green
-		vertexData.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-	}
-
-	void AddTranslation(vec2 wT) { wTranslate = wTranslate + wT; }
-
-	void Draw() {
-		if (vertexData.size() > 0) {
-			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			mat4 MVPTransform = M() * camera.V() * camera.P();
-			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
-			glBindVertexArray(vao);
-			glDrawArrays(GL_LINE_STRIP, 0, vertexData.size() / 5);
-			
-		}
-	}
-};
 #include <iostream>
 
 
@@ -194,9 +197,6 @@ protected:
 public:
 	KochanekBartelsSpline(float t = 0.0f, float c = 0.0f, float b = 0.0f);
 
-	KochanekBartelsSpline(double a, char b) {
-
-	}
 	void addSomeControlPoints(float y) {
 		AddControlPointByCord(-19.0f, y);
 		AddControlPointByCord(-17.0f, y);
@@ -211,7 +211,6 @@ public:
 		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv();
 		wCtrlPoints.push_back(wVertex);
 		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
-		printvector(wCtrlPoints);
 	}
 
 	 void AddControlPointByCord(float cX, float cY) {
@@ -221,14 +220,14 @@ public:
 		 qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
 	 }
 
-	 void printvector(std::vector<vec4> asd) {
+	/* void printvector(std::vector<vec4> asd) {
 		 for (auto temp : asd)
 			 std::cout << temp.x << ',' << temp.y << std::endl;
-	 }
+	 }*/
 
 	void Draw() {
 		mat4 VPTransform = camera.V() * camera.P();
-
+		gpuProgram.Use();
 		VPTransform.SetUniform(gpuProgram.getId(), "MVP");
 
 		int colorLocation = glGetUniformLocation(gpuProgram.getId(), "color");
@@ -243,18 +242,10 @@ public:
 			glUniform4f(location, 1.0f, 0.0f, 0.0f, 0.0f); // 3 floats*/
 			glDrawArrays(GL_POINTS, 0, wCtrlPoints.size());
 		}
-
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
-		glUniform4f(location, 0.0f, 1.0f, 0.0f, 1.0f); // 3 floats
+		glUniform4f(location, 33/256.0f, 161/256.0f, 30/256.0f, 1.0f); // 3 floats
 		if (wCtrlPoints.size() >= 2) {	// draw curve
 			std::vector<float> vertexData;
-		/*	for (int i = 0; i < nTesselatedVertices; i++) {	// Tessellate
-				float tNormalized = (float)i / (nTesselatedVertices - 1);
-				float t = tStart() + (tEnd() - tStart()) * tNormalized;
-				vec4 wVertex = r(t);
-				vertexData.push_back(wVertex.x);
-				vertexData.push_back(wVertex.y);
-			}*/
 
 
 			for (int x = 0; x < 400; x++) {
@@ -262,6 +253,8 @@ public:
 				vec4 wVertex(i, calculateY(i), 0, 1);
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(wVertex.y);
+				vertexData.push_back(wVertex.x);
+				vertexData.push_back(-10.0f);
 			}
 			// copy data to the GPU
 			glBindVertexArray(vaoCurve);
@@ -269,7 +262,7 @@ public:
 			glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 			if (colorLocation >= 0)
 				glUniform3f(colorLocation, 1, 1, 0);
-			glDrawArrays(GL_LINE_STRIP, 0, 400);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 800);
 
 		}
 
@@ -289,8 +282,6 @@ public:
 					break;
 				}
 			}
-		//	std::cout << "x passed: " << x << " actual.x: " << actual->x << std::endl;
-		//	std::cout << " points: " << wCtrlPoints.size() << ",  actual:" << actual->x << ", " << actual->y << std::endl;
 
 			if (rightside == nullptr)
 				return -6.2f;
@@ -312,17 +303,7 @@ public:
 			return res;
 			
 		}
-	float tStart() {
-		return ts[0];
-	}
-	float tEnd() { return ts[wCtrlPoints.size() - 1]; }
 
-	virtual vec4 r(float t) {
-		vec4 wPoint = vec4(0, 0, 0, 0);
-		for (unsigned int n = 0; n < wCtrlPoints.size(); n++)
-			wPoint += wCtrlPoints[n] * L(n, t);
-		return wPoint;
-	}
 
 };
 KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
@@ -350,6 +331,7 @@ KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
 
 	addSomeControlPoints(-6.2f);
 }
+
 float KochanekBartelsSpline::H0(float s) {
 		return 2*s*s*s - 3*s*s + 1;
 		}
@@ -363,12 +345,75 @@ float KochanekBartelsSpline::H3(float s) {
 	return s*s*s - s*s;
 }
 
-LineStrip lineStrip;
 KochanekBartelsSpline* kb;
+
+
+
+
+class TexturedQuad {
+	unsigned int vao, vbo[2];
+	vec2 vertices[4], uvs[4];
+	Texture * pTexture;
+public:
+	TexturedQuad() {
+		vertices[0] = vec2(-10, -10); uvs[0] = vec2(0, 0);
+		vertices[1] = vec2(10, -10);  uvs[1] = vec2(1, 0);
+		vertices[2] = vec2(10, 10);   uvs[2] = vec2(1, 1);
+		vertices[3] = vec2(-10, 10);  uvs[3] = vec2(0, 1);
+	}
+	void Create() {
+		glGenVertexArrays(1, &vao);	// create 1 vertex array object
+		glBindVertexArray(vao);		// make it active
+
+		glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
+
+		// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
+		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
+		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	   // copy to that part of the memory which is not modified 
+		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+
+		int width = 128, height = 128;
+		std::vector<vec4> image(width * height);
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				float luminance = ((x / 16) % 2) ^ ((y / 16) % 2);
+				image[y * width + x] = vec4(luminance, luminance, luminance, 1);
+			}
+		}
+
+		pTexture = new Texture(width, height, image);
+	}
+
+	
+	void Draw() {
+		glBindVertexArray(vao);	// make the vao and its vbos active playing the role of the data source
+
+		mat4 MVPTransform = camera.V() * camera.P();
+
+		// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
+		MVPTransform.SetUniform(backGroundMaker.getId(), "MVP");
+
+
+		
+
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	// draw two triangles forming a quad
+	}
+};
+
 
 
 // Initialization, create an OpenGL context
 void onInitialization() {
+
+
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(2.0f); // Width of lines in pixels
 
@@ -382,20 +427,22 @@ void onInitialization() {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	// Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
 	
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 	glEnableVertexAttribArray(0);  // AttribArray 0
 	glVertexAttribPointer(0,       // vbo -> AttribArray 0
 		2, GL_FLOAT, GL_FALSE, // two floats/attrib, not fixed-point
 		0, NULL); 		     // stride, offset: tightly packed
 
-	// create program for the GPU
+	// create program for the GPU  fragmentSourceForBackground
 	gpuProgram.Create(vertexSource, fragmentSource, "outColor");
+	backGroundMaker.Create(vertexSourceForBackground, fragmentSourceForBackground, "outColor");
 	glutPostRedisplay();
 }
 
 // Window has become invalid: Redraw
 void onDisplay() {
-	glClearColor(0, 0, 0, 0);     // background color
+	glClearColor(159/256.0f, 207/256.0f, 230/256.0f, 0.98f);     // background color
 	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
 
 	// Set color to (0, 1, 0) = green
@@ -410,9 +457,12 @@ void onDisplay() {
 	location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
 	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
 
+	location = glGetUniformLocation(backGroundMaker.getId(), "MVP");	// Get the GPU location of uniform variable MVP
+	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
+	
 	glBindVertexArray(vao);  // Draw call
 	//glDrawArrays(GL_TRIANGLES, 0 /*startIdx*/, 3 /*# Elements*/);
-
+	
 	kb->Draw();
 	glutSwapBuffers(); // exchange buffers for double buffering
 }

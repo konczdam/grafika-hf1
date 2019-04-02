@@ -1,1 +1,9 @@
-﻿  Skeleton.vcxproj -> D:\bme\grafika\hf1\Programs\Skeleton\bin\Skeleton.exe
+﻿  Skeleton.cpp
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(198): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(199): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+  Generating code
+  12 of 193 functions ( 6.2%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    23 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  Skeleton.vcxproj -> D:\bme\grafika\hf1\Programs\Skeleton\bin\Skeleton.exe
