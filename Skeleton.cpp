@@ -49,11 +49,11 @@ const char * const fragmentSource = R"(
 	#version 330			// Shader 3.3
 	precision highp float;	// normal floats, makes no difference on desktop computers
 	
-	uniform vec3 color;		// uniform variable, the color of the primitive
+	uniform vec4 color;		// uniform variable, the color of the primitive
 	out vec4 outColor;		// computed color of the current pixel
 
 	void main() {
-		outColor = vec4(0, 1, 0, 1);	// computed color is the color of the primitive
+		outColor = color;	// computed color is the color of the primitive
 	}
 )";
 
@@ -198,12 +198,12 @@ public:
 
 	}
 	void addSomeControlPoints(float y) {
-		AddControlPointByCord(-13.0f, y);
-		AddControlPointByCord(-12.0f, y);
-		AddControlPointByCord(-10.0f, y);
-		AddControlPointByCord(13.0f, y);
-		AddControlPointByCord(12.0f, y);
-		AddControlPointByCord(10.0f, y);
+		AddControlPointByCord(-19.0f, y);
+		AddControlPointByCord(-17.0f, y);
+		AddControlPointByCord(-15.0f, y);
+		AddControlPointByCord(15.0f, y);
+		AddControlPointByCord(17.0f, y);
+		AddControlPointByCord(19.0f, y);
 	 }
 
 	 void AddControlPoint(float cX, float cY) {
@@ -219,8 +219,6 @@ public:
 		 vec4 wVertex = vec4(cX, cY, 0, 1);
 		 wCtrlPoints.push_back(wVertex);
 		 qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
-		 printvector(wCtrlPoints);
-		 std::cout << " Vector ends here" << std::endl;
 	 }
 
 	 void printvector(std::vector<vec4> asd) {
@@ -235,16 +233,19 @@ public:
 
 		int colorLocation = glGetUniformLocation(gpuProgram.getId(), "color");
 
-
 		if (wCtrlPoints.size() > 0) {	// draw control points
 			glBindVertexArray(vaoCtrlPoints);
 			glBindBuffer(GL_ARRAY_BUFFER, vboCtrlPoints);
 			glBufferData(GL_ARRAY_BUFFER, wCtrlPoints.size() * 4 * sizeof(float), &wCtrlPoints[0], GL_DYNAMIC_DRAW);
 			if (colorLocation >= 0) glUniform3f(colorLocation, 1, 0, 0);
-			glPointSize(10.0f);
+				glPointSize(10.0f);
+			int location = glGetUniformLocation(gpuProgram.getId(), "color");
+			glUniform4f(location, 1.0f, 0.0f, 0.0f, 0.0f); // 3 floats*/
 			glDrawArrays(GL_POINTS, 0, wCtrlPoints.size());
 		}
 
+		int location = glGetUniformLocation(gpuProgram.getId(), "color");
+		glUniform4f(location, 0.0f, 1.0f, 0.0f, 1.0f); // 3 floats
 		if (wCtrlPoints.size() >= 2) {	// draw curve
 			std::vector<float> vertexData;
 		/*	for (int i = 0; i < nTesselatedVertices; i++) {	// Tessellate
@@ -288,11 +289,11 @@ public:
 					break;
 				}
 			}
-			std::cout << "x passed: " << x << " actual.x: " << actual->x << std::endl;
+		//	std::cout << "x passed: " << x << " actual.x: " << actual->x << std::endl;
 		//	std::cout << " points: " << wCtrlPoints.size() << ",  actual:" << actual->x << ", " << actual->y << std::endl;
 
-			/*if (rightside == nullptr)
-				return -6.2f;*/
+			if (rightside == nullptr)
+				return -6.2f;
 			//Choosing Tangent Vectors
 			
 			float deltaI = rightside->x - actual->x;
@@ -303,8 +304,6 @@ public:
 			//outgoing target vec
 			float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
 
-			std::cout << "TiI: " << TiI << ", TiO: " << TiO << std::endl;
-			//std::cout << TiI << ", " << TiO << std::endl;
 			float res = 0;
 			res += H0((x - actual->x) / deltaI)  *  actual->y;
 			res += H1((x - actual->x) / deltaI)  *  rightside->y;
@@ -398,7 +397,7 @@ void onDisplay() {
 
 	// Set color to (0, 1, 0) = green
 	int location = glGetUniformLocation(gpuProgram.getId(), "color");
-	glUniform3f(location, 0.0f, 1.0f, 0.0f); // 3 floats
+	glUniform4f(location, 1.0f, 1.0f, 0.0f,1.0f); // 3 floats
 
 	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
 		                      0, 1, 0, 0,    // row-major!
