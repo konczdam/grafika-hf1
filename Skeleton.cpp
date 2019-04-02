@@ -160,85 +160,73 @@ public:
 		}
 	}
 };
+#include <iostream>
 
-class Curve {
+
+int compareVec4ByX(const void* v1, const void* v2){
+	int x1 = ((vec4*)v1)->x;
+	int x2 = ((vec4*)v2)->x;
+	if (x2 < x1)
+		return 1;
+	if (x2 == x1)
+		return 0;
+	return -1;
+}
+
+class KochanekBartelsSpline {
 	unsigned int vaoCurve, vboCurve;
 	unsigned int vaoCtrlPoints, vboCtrlPoints;
-	unsigned int vaoConvexHull, vboConvexHull;
-	unsigned int vaoAnimatedObject, vboAnimatedObject;
 	int nTesselatedVertices = 100;
+	std::vector<float> ts;  // knots
+	float tension, bias, continuity;
+	float L(int i, float t) {
+		float Li = 1.0f;
+		for (unsigned int j = 0; j < wCtrlPoints.size(); j++)
+			if (j != i) Li *= (t - ts[j]) / (ts[i] - ts[j]);
+		return Li;
+	}
+	float H0(float);
+	float H1(float);
+	float H2(float);
+	float H3(float);
 protected:
 	std::vector<vec4> wCtrlPoints;		// coordinates of control points
 public:
-	Curve() {
-		// Curve
-		glGenVertexArrays(1, &vaoCurve);
-		glBindVertexArray(vaoCurve);
+	KochanekBartelsSpline(float t = 0.0f, float c = 0.0f, float b = 0.0f);
 
-		glGenBuffers(1, &vboCurve); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
-
-		// Control Points
-		glGenVertexArrays(1, &vaoCtrlPoints);
-		glBindVertexArray(vaoCtrlPoints);
-
-		glGenBuffers(1, &vboCtrlPoints); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vboCtrlPoints);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
-
-		// Convex Hull
-		glGenVertexArrays(1, &vaoConvexHull);
-		glBindVertexArray(vaoConvexHull);
-
-		glGenBuffers(1, &vboConvexHull); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vboConvexHull);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
-
-		// Animated Object
-		glGenVertexArrays(1, &vaoAnimatedObject);
-		glBindVertexArray(vaoAnimatedObject);
-
-		glGenBuffers(1, &vboAnimatedObject); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vboAnimatedObject);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
+	KochanekBartelsSpline(double a, char b) {
 
 	}
+	void addSomeControlPoints(float y) {
+		AddControlPointByCord(-13.0f, y);
+		AddControlPointByCord(-12.0f, y);
+		AddControlPointByCord(-10.0f, y);
+		AddControlPointByCord(13.0f, y);
+		AddControlPointByCord(12.0f, y);
+		AddControlPointByCord(10.0f, y);
+	 }
 
-	virtual vec4 r(float t) { return wCtrlPoints[0]; }
-	virtual float tStart() { return 0; }
-	virtual float tEnd() { return 1; }
-
-	virtual void AddControlPoint(float cX, float cY) {
+	 void AddControlPoint(float cX, float cY) {
+		ts.push_back((float)wCtrlPoints.size());
 		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv();
 		wCtrlPoints.push_back(wVertex);
+		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+		printvector(wCtrlPoints);
 	}
 
-	// Returns the selected control point or -1
-	int PickControlPoint(float cX, float cY) {
-		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv();
-		for (unsigned int p = 0; p < wCtrlPoints.size(); p++) {
-			if (dot(wCtrlPoints[p] - wVertex, wCtrlPoints[p] - wVertex) < 0.1) return p;
-		}
-		return -1;
-	}
+	 void AddControlPointByCord(float cX, float cY) {
+		 ts.push_back((float)wCtrlPoints.size());
+		 vec4 wVertex = vec4(cX, cY, 0, 1);
+		 wCtrlPoints.push_back(wVertex);
+		 qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+		 printvector(wCtrlPoints);
+		 std::cout << " Vector ends here" << std::endl;
+	 }
 
-	void MoveControlPoint(int p, float cX, float cY) {
-		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv();
-		wCtrlPoints[p] = wVertex;
-	}
+	 void printvector(std::vector<vec4> asd) {
+		 for (auto temp : asd)
+			 std::cout << temp.x << ',' << temp.y << std::endl;
+	 }
 
 	void Draw() {
 		mat4 VPTransform = camera.V() * camera.P();
@@ -259,10 +247,18 @@ public:
 
 		if (wCtrlPoints.size() >= 2) {	// draw curve
 			std::vector<float> vertexData;
-			for (int i = 0; i < nTesselatedVertices; i++) {	// Tessellate
+		/*	for (int i = 0; i < nTesselatedVertices; i++) {	// Tessellate
 				float tNormalized = (float)i / (nTesselatedVertices - 1);
 				float t = tStart() + (tEnd() - tStart()) * tNormalized;
 				vec4 wVertex = r(t);
+				vertexData.push_back(wVertex.x);
+				vertexData.push_back(wVertex.y);
+			}*/
+
+
+			for (int x = 0; x < 400; x++) {
+				float i = ((float)x / 20.0f) - 10.0f;
+				vec4 wVertex(i, calculateY(i), 0, 1);
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(wVertex.y);
 			}
@@ -270,64 +266,112 @@ public:
 			glBindVertexArray(vaoCurve);
 			glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
 			glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-			if (colorLocation >= 0) glUniform3f(colorLocation, 1, 1, 0);
-			glDrawArrays(GL_LINE_STRIP, 0, nTesselatedVertices);
+			if (colorLocation >= 0)
+				glUniform3f(colorLocation, 1, 1, 0);
+			glDrawArrays(GL_LINE_STRIP, 0, 400);
 
 		}
-	}
-};
-
-int compareVec4ByX(const void* v1, const void* v2){
-	int x1 = ((vec4*)v1)->x;
-	int x2 = ((vec4*)v2)->x;
-	if (x2 > x1)
-		return 1;
-	if (x2 == x1)
-		return 0;
-	return -1;
-}
-class Kochanek_Bartels : public Curve {
-	std::vector<float> ts;  // knots
-	float L(int i, float t) {
-		float Li = 1.0f;
-		for (unsigned int j = 0; j < wCtrlPoints.size(); j++)
-			if (j != i) Li *= (t - ts[j]) / (ts[i] - ts[j]);
-		return Li;
-	}
-public:
-	Kochanek_Bartels() {
-		Curve::Curve();
-		ts.push_back((float)wCtrlPoints.size());
-		wCtrlPoints.push_back(vec4(10.f, -6.2, 0, 1));
-		ts.push_back((float)wCtrlPoints.size());
-		wCtrlPoints.push_back(vec4(-10.f, -6.2, 0, 1));
 
 	}
-	void AddControlPoint(float cX, float cY) {
-		ts.push_back((float)wCtrlPoints.size());
-		Curve::AddControlPoint(cX, cY);
-		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+
+		float calculateY(float x) {
+			vec4* leftside = &wCtrlPoints[0];
+			vec4* actual = &wCtrlPoints[1];
+			vec4* rightside = nullptr;
+			vec4* toTheToRight = nullptr;
+			for (unsigned int i = 2; i < wCtrlPoints.size() - 1; i++) {
+				if (wCtrlPoints[i].x > x ) {
+					leftside = &wCtrlPoints[i-2];
+					actual = &wCtrlPoints[i-1];
+					rightside = &wCtrlPoints[i];
+					toTheToRight = &wCtrlPoints[i + 1];
+					break;
+				}
+			}
+			std::cout << "x passed: " << x << " actual.x: " << actual->x << std::endl;
+		//	std::cout << " points: " << wCtrlPoints.size() << ",  actual:" << actual->x << ", " << actual->y << std::endl;
+
+			/*if (rightside == nullptr)
+				return -6.2f;*/
+			//Choosing Tangent Vectors
+			
+			float deltaI = rightside->x - actual->x;
+			//incoming target vector
+			//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+			float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
+
+			//outgoing target vec
+			float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+
+			std::cout << "TiI: " << TiI << ", TiO: " << TiO << std::endl;
+			//std::cout << TiI << ", " << TiO << std::endl;
+			float res = 0;
+			res += H0((x - actual->x) / deltaI)  *  actual->y;
+			res += H1((x - actual->x) / deltaI)  *  rightside->y;
+			res += H2((x - actual->x) / deltaI)  * 1 * TiO;
+			res += H3((x - actual->x) / deltaI)  * 1 * TiI ;
+			return res;
+			
+		}
+	float tStart() {
+		return ts[0];
 	}
-	float tStart() { return ts[0]; }
 	float tEnd() { return ts[wCtrlPoints.size() - 1]; }
 
 	virtual vec4 r(float t) {
 		vec4 wPoint = vec4(0, 0, 0, 0);
-		for (unsigned int n = 0; n < wCtrlPoints.size(); n++) wPoint += wCtrlPoints[n] * L(n, t);
+		for (unsigned int n = 0; n < wCtrlPoints.size(); n++)
+			wPoint += wCtrlPoints[n] * L(n, t);
 		return wPoint;
 	}
+
 };
+KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
+	tension(t), continuity(c), bias(b){
+	glGenVertexArrays(1, &vaoCurve);
+	glBindVertexArray(vaoCurve);
 
+	glGenBuffers(1, &vboCurve); // Generate 1 vertex buffer object
+	glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
+	// Enable the vertex attribute arrays
+	glEnableVertexAttribArray(0);  // attribute array 0
+	// Map attribute array 0 to the vertex data of the interleaved vbo
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
 
+	// Control Points
+	glGenVertexArrays(1, &vaoCtrlPoints);
+	glBindVertexArray(vaoCtrlPoints);
+
+	glGenBuffers(1, &vboCtrlPoints); // Generate 1 vertex buffer object
+	glBindBuffer(GL_ARRAY_BUFFER, vboCtrlPoints);
+	// Enable the vertex attribute arrays
+	glEnableVertexAttribArray(0);  // attribute array 0
+	// Map attribute array 0 to the vertex data of the interleaved vbo
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
+
+	addSomeControlPoints(-6.2f);
+}
+float KochanekBartelsSpline::H0(float s) {
+		return 2*s*s*s - 3*s*s + 1;
+		}
+float KochanekBartelsSpline::H1(float s) {
+	return -2 * s*s*s + 3 * s*s ;
+}
+float KochanekBartelsSpline::H2(float s) {
+	return  s*s*s - 2 * s*s + s;
+}
+float KochanekBartelsSpline::H3(float s) {
+	return s*s*s - s*s;
+}
 LineStrip lineStrip;
-Curve* kb;
+KochanekBartelsSpline* kb;
 // Initialization, create an OpenGL context
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(2.0f); // Width of lines in pixels
 
 // Create objects by setting up their vertex data on the GPU
-	kb = new Kochanek_Bartels();
+	kb = new KochanekBartelsSpline(-1.0f, 0, 0);
 	glGenVertexArrays(1, &vao);	// get 1 vao id
 	glBindVertexArray(vao);		// make it active
 
