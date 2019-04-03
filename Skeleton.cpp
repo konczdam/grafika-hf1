@@ -436,8 +436,8 @@ public:
 };
 
 class Biker {
-	GLuint				vao, kullovao, vbo, kullovbo;	// vertex array object, vertex buffer object
-	std::vector<float>  vertexData, kullodata; // interleaved data of coordinates and colors
+	GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
+	std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
 	vec2			    wTranslate;
 	vec2 center;
 	float radius;
@@ -445,7 +445,7 @@ class Biker {
 	float rotate = 0;
 	float CalculateRotation(vec2 asd) {
 		float circumference = 2 * radius * M_PI;
-		float motion = sqrtf(pow(asd.x, 2) + pow(asd.y, 2));
+		float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
 		return 2 * M_PI*motion / circumference;
 	}
 public:
@@ -458,7 +458,6 @@ public:
 		
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-
 		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		// Enable the vertex attribute arrays
@@ -471,36 +470,52 @@ public:
 
 		// copy data to the GPU
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_STATIC_DRAW);
 
 
-		
-		glGenVertexArrays(1, &kullovao);
-		glBindVertexArray(kullovao);
-		// copy data to the GPU
+		{
+			glGenVertexArrays(1, &kullovao);
+			glBindVertexArray(kullovao);
+			glGenBuffers(1, &kullovbo); // Generate 1 vertex buffer object
+			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
+			glEnableVertexAttribArray(0);  // attribute array 0
+			glEnableVertexAttribArray(1);  // attribute array 1
+			// Map attribute array 0 to the vertex data of the interleaved vbo
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
+			// copy data to the GPU
+			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
+			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
+		}
+		{
+			glGenVertexArrays(1, &vaobody);
+			glBindVertexArray(vaobody);
+			glGenBuffers(1, &vbobody); // Generate 1 vertex buffer object
+			glBindBuffer(GL_ARRAY_BUFFER, vbobody);
+			// Enable the vertex attribute arrays
+			glEnableVertexAttribArray(0);  // attribute array 0
+			glEnableVertexAttribArray(1);  // attribute array 1
+			// Map attribute array 0 to the vertex data of the interleaved vbo
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
+			// Map attribute array 1 to the color data of the interleaved vbo
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
 
-		glGenBuffers(1, &kullovbo); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
-		glEnableVertexAttribArray(0);  // attribute array 0
-		glEnableVertexAttribArray(1);  // attribute array 1
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
-		// Map attribute array 1 to the color data of the interleaved vbo
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
+			// copy data to the GPU
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);
+		}
 
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
-		glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
+
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindVertexArray(vao);
 		center = vec2(-5.2, -2.45f);
 		radius = 0.8f;
 		makeCircle();
 		makekullok();
-		printvector(kullodata);
-		//rotateKulloData();
-		printvector(kullodata);
+		makeBody();
 	}
+
+
 	mat4 M() {
 		return mat4(1, 0, 0, 0,
 			0, 1, 0, 0,
@@ -512,14 +527,6 @@ public:
 			0, 1, 0, 0,
 			0, 0, 1, 0,
 			-wTranslate.x, -wTranslate.y, 0, 1); // inverse translation
-	}
-
-	mat4 Mrotate() {
-		return mat4(cosf(rotate), sinf(rotate), 0, 0,
-					-sinf(rotate), cosf(rotate), 0, 0,
-					 0, 0, 1, 0,
-					 0, 0, 0, 1); // rotation
-	
 	}
 	mat4 Mkullok() {
 		return mat4(1, 0, 0, 0,
@@ -581,20 +588,88 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 	}
-
-	void AddTranslation(vec2 wT) {
-		wTranslate = wTranslate + wT;
-		center = center + wT;
+	void makeBody() {
+		glBindVertexArray(vaobody);
 		
+		float thigh = 1.6f;
+		float shin = 1.7f;
+		const vec2 P1 = vec2(center.x, center.y + 2.2f);
+		const vec2 P2 = vec2(cos(rotate)*radius*0.75 + center.x, sin(rotate)*radius*0.75 + center.y);
+		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
+		//vec2 a = vec2((P2.x - P1.x) / R,  (P2.y - P1.y) / R);
+		//vec2 b = vec2((P2.y - P1.y) / R, -(P2.x - P1.x) / R);
+		float centerDx = P1.x - P2.x;
+		float centerDy = P1.y - P2.y;
+		float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
+		printf("ar: %f\n", r);
+		/*if (!(fabsf(thigh - shin) <= r && r <= thigh + shin)); {
+			printf("bad parameters!!");
+			printf("\nR: %f", R);
+			return;
+		}*/
+		float r2d = r * r;
+		float r4d = r2d * r2d;
+		float rThighSquared = thigh * thigh;
+		float rShinSquared = shin * shin;
+		float a = (rThighSquared - rShinSquared) / (2 * r2d);
+		float r2r2 = (rThighSquared - rShinSquared);
+		float c = sqrtf(2 * (rThighSquared + rShinSquared) / r2d - (r2r2 * r2r2) / r4d - 1);
+
+		float fx = (P1.x + P2.x) / 2 + a * (P2.x - P1.x);
+		float gx = c * (P2.y - P1.y) / 2;
+		
+		float ix1 = fx + gx;
+		float ix2 = fx - gx;
+
+		float fy = (P1.y + P2.y) / 2 + a * (P2.y - P1.y);
+		float gy = c * (P1.x - P2.x) / 2;
+
+		float iy1 = fy + gy;
+		float iy2 = fy - gy;
+
+
+		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(ix1, iy1, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
+		printf("%d\n", bodydata.size());
+	/*	bodydata.push_back(P1.x);
+		bodydata.push_back(P1.y);
+		bodydata.push_back(0); // red
+		bodydata.push_back(0); // green
+		bodydata.push_back(0); // blue
+		// copy data to the GPU
+		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
+		glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);
+		
+		bodydata.push_back(ix1);
+		bodydata.push_back(iy1);
+		bodydata.push_back(0); // red
+		bodydata.push_back(0); // green
+		bodydata.push_back(0); // blue
+		// copy data to the GPU
+		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
+		glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);
+
+		bodydata.push_back(P2.x);
+		bodydata.push_back(P2.y);
+		bodydata.push_back(0); // red
+		bodydata.push_back(0); // green
+		bodydata.push_back(0); // blue
+		// copy data to the GPU
+		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
+		glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);*/
+ 	}
+	void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
+		tarolo.push_back(x);
+		tarolo.push_back(y);
+		tarolo.push_back(rgb.x);
+		tarolo.push_back(rgb.y);
+		tarolo.push_back(rgb.z);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
+
 	}
-	void rotateKulloData() {
-		for (int i = 0; i < kullodata.size() - 4; i += 10) {
-			float x = kullodata[i] - center.x;
-			float y = kullodata[i+1] - center.y;
-			kullodata[i] = x*cosf(rotate) - y*sinf(rotate) + center.x;
-			kullodata[i + 1] = x * sinf(rotate) + y * cosf(rotate) + center.y;
-		}
-	}
+
 	void Draw() {
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		glUniform4f(location, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -624,8 +699,20 @@ public:
 			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
 			glLineWidth(2.0f);
-			
+		}
 
+		if (bodydata.size() > 0) {
+			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
+			bodydata.clear();
+			makeBody();
+			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
+			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
+
+			glBindVertexArray(vaobody);
+			glBindBuffer(GL_ARRAY_BUFFER, vbobody);
+			glLineWidth(3.0f);
+			glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
+			glLineWidth(2.0f);
 		}
 	}
 };
