@@ -167,6 +167,16 @@ public:
 Camera2D camera;		// 2D camera
 
 #include <iostream>
+	 void printvector(std::vector<vec4> asd) {
+		 for (auto temp : asd)
+			 std::cout << temp.x << ',' << temp.y << std::endl;
+	 }
+
+	 void printvector(std::vector<float> asd) {
+		 for (int i = 0; i < asd.size()-4; i+=5)
+			 std::cout << asd[i] << ',' << asd[i+1] << std::endl;
+		 std::cout << "vector ends here" << std::endl;
+	 }
 
 
 int compareVec4ByX(const void* v1, const void* v2){
@@ -223,10 +233,6 @@ public:
 		 qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
 	 }
 
-	/* void printvector(std::vector<vec4> asd) {
-		 for (auto temp : asd)
-			 std::cout << temp.x << ',' << temp.y << std::endl;
-	 }*/
 
 	void Draw() {
 		mat4 VPTransform = camera.V() * camera.P();
@@ -409,6 +415,7 @@ class LineStrip {
 	float PI = 3.14159265358979323846; // a PI értékét az internetrõl másoltam, nem saját magam számoltam
 public:
 	void Create() {
+		
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 
@@ -416,9 +423,6 @@ public:
 
 		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-		/*glGenBuffers(1, &kullovbo); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);*/
 		// Enable the vertex attribute arrays
 		glEnableVertexAttribArray(0);  // attribute array 0
 		glEnableVertexAttribArray(1);  // attribute array 1
@@ -433,13 +437,29 @@ public:
 
 
 
+		glGenVertexArrays(1, &kullovao);
+		glBindVertexArray(kullovao);
 		// copy data to the GPU
-	/*	glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
-		glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);*/
-		center = vec2(0, 5.0f);
+
+		glGenBuffers(1, &kullovbo); // Generate 1 vertex buffer object
+		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
+		glEnableVertexAttribArray(0);  // attribute array 0
+		glEnableVertexAttribArray(1);  // attribute array 1
+		// Map attribute array 0 to the vertex data of the interleaved vbo
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
+		// Map attribute array 1 to the color data of the interleaved vbo
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
+
+		// copy data to the GPU
+		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
+		glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBindVertexArray(vao);
+		center = vec2(1.12, 5.12f);
 		radius = 0.8f;
 		makeCircle();
-		//makekullok();
+		makekullok();
+		printvector(kullodata);
 	}
 	mat4 M() {
 		return mat4(1, 0, 0, 0,
@@ -472,6 +492,7 @@ public:
 	}
 
 	void makekullok() {
+		glBindVertexArray(kullovao);
 		for (float i = 0.0f; i <= 2 * PI; i += 2 * PI / 6) {
 			kullodata.push_back(cos(i)*radius + center.x);
 			kullodata.push_back(sin(i)*radius + center.y);
@@ -515,8 +536,21 @@ public:
 			mat4 MVPTransform = M() * camera.V() * camera.P();
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 			glBindVertexArray(vao);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_LOOP, 0, vertexData.size() / 5);
+			glLineWidth(2.0f);
+
+		}
+
+		if (kullodata.size() > 0) {
+			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
+			mat4 MVPTransform = M() * camera.V() * camera.P();
+			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
+			glBindVertexArray(kullovao);
+			glBindBuffer(GL_ARRAY_BUFFER,kullovbo);
+			glLineWidth(3.0f);
+			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
 			glLineWidth(2.0f);
 
 		}

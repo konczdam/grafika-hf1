@@ -1,9 +1,11 @@
 ﻿  Skeleton.cpp
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(173): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(174): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(409): warning C4305: 'initializing': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(176): warning C4018: '<': signed/unsigned mismatch
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(183): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(184): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(415): warning C4305: 'initializing': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(458): warning C4305: 'argument': truncation from 'double' to 'float'
   Generating code
-  2 of 215 functions ( 0.9%) were compiled, the rest were copied from previous compilation.
+  1 of 238 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     1 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
