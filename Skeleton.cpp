@@ -441,21 +441,18 @@ class Biker {
 	vec2			    wTranslate;
 	vec2 center;
 	float radius;
-	float PI = 3.14159265358979323846; // a PI értékét az internetrõl másoltam, nem saját magam számoltam ki
 	vec4 offset = vec4(0, 0, 0, 0);
 	float rotate = 0;
-
 	float CalculateRotation(vec2 asd) {
-		float circumference = 2 * radius * PI;
+		float circumference = 2 * radius * M_PI;
 		float motion = sqrt(pow(asd.x, 2) + pow(asd.y, 2));
-		return 2 * PI*motion / circumference;
+		return 2 * M_PI*motion / circumference;
 	}
 public:
 	void moveCenterByVec(vec2 asd) {
 		center = center + asd;
 		wTranslate = wTranslate + asd;
-		rotate += CalculateRotation(asd);
-
+		rotate += (asd.x<0? 1: -1)*CalculateRotation(asd);
 	}
 	void Create() {
 		
@@ -496,7 +493,7 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindVertexArray(vao);
-		center = vec2(1.12, 5.12f);
+		center = vec2(-5.2, -2.45f);
 		radius = 0.8f;
 		makeCircle();
 		makekullok();
@@ -524,19 +521,14 @@ public:
 					 0, 0, 0, 1); // rotation
 	
 	}
-	/*mat4 Mkullok() {
+	mat4 Mkullok() {
 		return mat4(1, 0, 0, 0,
 					0, 1, 0, 0,
 					0, 0, 1, 0,
-					wTranslate.x, wTranslate.y, 0, 1)* Mrotate(); // translation
-	}*/
-
-	mat4 Mkullok() {
-		return M()*Minv()*mat4(cosf(rotate), sinf(rotate), 0, 0,
-							  -sinf(rotate), cosf(rotate), 0, 0,
-							   0, 0, 0, 0,
-								0, 0, 0, 1)*M(); // translation
+					0, 0, 0, 1); // translation
 	}
+
+
 
 	void AddPointByCord(float x, float y) {
 		vertexData.push_back(x);
@@ -550,17 +542,16 @@ public:
 	}
 
 	void makeCircle() {
-		for (float i = 0.0f; i <= 2*PI; i += 2*PI / 100) {
+		for (float i = 0.0f; i <= 2*M_PI; i += 2*M_PI / 100) {
 			AddPointByCord(cos(i)*radius + center.x, sin(i)*radius + center.y);
 		}
 	}
 
 	void makekullok() {
 		glBindVertexArray(kullovao);
-		for (float i = 0.0f; i <= 2 * PI; i += 2 * PI / 6) {
-			
-			kullodata.push_back(cos(i)*radius + center.x);
-			kullodata.push_back(sin(i)*radius + center.y);
+		for (float i = 0.0f; i <= 2 * M_PI; i += 2 * M_PI / 6) {
+			kullodata.push_back(cos(i+rotate)*radius + center.x);
+			kullodata.push_back(sin(i+rotate)*radius + center.y);
 			kullodata.push_back(0); // red
 			kullodata.push_back(0); // green
 			kullodata.push_back(0); // blue
@@ -594,6 +585,7 @@ public:
 	void AddTranslation(vec2 wT) {
 		wTranslate = wTranslate + wT;
 		center = center + wT;
+		
 	}
 	void rotateKulloData() {
 		for (int i = 0; i < kullodata.size() - 4; i += 10) {
@@ -621,10 +613,9 @@ public:
 
 		if (kullodata.size() > 0) {
 			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			//rotateKulloData();
-			//printvector(kullodata);
-			
-			mat4 MVPTransform = M() * camera.V() * camera.P();
+			kullodata.clear();
+			makekullok();
+			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 			glBindVertexArray(kullovao);
 			glBindBuffer(GL_ARRAY_BUFFER,kullovbo);
@@ -634,7 +625,6 @@ public:
 			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
 			glLineWidth(2.0f);
 			
-		//	glBufferData(GL_ARRAY_BUFFER)
 
 		}
 	}
@@ -707,7 +697,11 @@ void onDisplay() {
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
-		linestrip.moveCenterByVec(vec2(0.1,0.0f));
+		linestrip.moveCenterByVec(vec2(0.1,0.10f));
+		glutPostRedisplay();
+	}
+	if (key == 'a') {
+		linestrip.moveCenterByVec(vec2(-0.1, -0.10f));
 		glutPostRedisplay();
 	}
 }
