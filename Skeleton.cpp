@@ -230,7 +230,7 @@ public:
 		 ts.push_back((float)wCtrlPoints.size());
 		 vec4 wVertex = vec4(cX, cY, 0, 1);
 		 wCtrlPoints.push_back(wVertex);
-		 qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+		 sortControlpoints();
 	 }
 
 
@@ -445,7 +445,7 @@ class Biker {
 	float rotate = 0;
 	float CalculateRotation(vec2 asd) {
 		float circumference = 2 * radius * M_PI;
-		float motion = sqrt(pow(asd.x, 2) + pow(asd.y, 2));
+		float motion = sqrtf(pow(asd.x, 2) + pow(asd.y, 2));
 		return 2 * M_PI*motion / circumference;
 	}
 public:
@@ -474,7 +474,7 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 
 
-
+		
 		glGenVertexArrays(1, &kullovao);
 		glBindVertexArray(kullovao);
 		// copy data to the GPU
@@ -697,11 +697,11 @@ void onDisplay() {
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
-		linestrip.moveCenterByVec(vec2(0.1,0.10f));
+		linestrip.moveCenterByVec(vec2(0.1,0.00f));
 		glutPostRedisplay();
 	}
 	if (key == 'a') {
-		linestrip.moveCenterByVec(vec2(-0.1, -0.10f));
+		linestrip.moveCenterByVec(vec2(-0.1, 0.00f));
 		glutPostRedisplay();
 	}
 }
