@@ -667,10 +667,11 @@ public:
 
 		float iy1 = fy + gy;
 		float iy2 = fy - gy;
-		printf("ágyék-térd távolság: %f\n", sqrtf(powf(P1.x - ix1, 2) + powf(P1.y - iy1, 2)));
-
-		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy2);
-
+		if(leg == 1)
+			printf("egyik: %f , %f\n", ix2, iy2);
+		else
+			printf("masik:: %f , %f\n", ix1, iy1);
+		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy1);
 		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
 		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
 		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
