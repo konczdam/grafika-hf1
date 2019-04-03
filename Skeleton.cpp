@@ -192,7 +192,6 @@ int compareVec4ByX(const void* v1, const void* v2){
 class KochanekBartelsSpline {
 	unsigned int vaoCurve, vboCurve;
 	unsigned int vaoCtrlPoints, vboCtrlPoints;
-	int nTesselatedVertices = 100;
 	std::vector<float> ts;  // knots
 	float tension, bias, continuity;
 	float L(int i, float t) {
@@ -442,14 +441,21 @@ class Biker {
 	vec2			    wTranslate;
 	vec2 center;
 	float radius;
-	float PI = 3.14159265358979323846; // a PI értékét az internetrõl másoltam, nem saját magam számoltam
+	float PI = 3.14159265358979323846; // a PI értékét az internetrõl másoltam, nem saját magam számoltam ki
 	vec4 offset = vec4(0, 0, 0, 0);
+	float rotate = 0;
+
+	float CalculateRotation(vec2 asd) {
+		float circumference = 2 * radius * PI;
+		float motion = sqrt(pow(asd.x, 2) + pow(asd.y, 2));
+		return 2 * PI*motion / circumference;
+	}
 public:
-	void moveCenterByVec() {
-		center = center + vec2(0.2, 0);
-		wTranslate = wTranslate + vec2(0.2, 0);
-		offset = offset + vec4(0.1, 0, 0, 0);
-		//wTranslate.x = wTranslate.x + 0.2f;
+	void moveCenterByVec(vec2 asd) {
+		center = center + asd;
+		wTranslate = wTranslate + asd;
+		rotate += CalculateRotation(asd);
+
 	}
 	void Create() {
 		
@@ -495,6 +501,8 @@ public:
 		makeCircle();
 		makekullok();
 		printvector(kullodata);
+		//rotateKulloData();
+		printvector(kullodata);
 	}
 	mat4 M() {
 		return mat4(1, 0, 0, 0,
@@ -507,6 +515,27 @@ public:
 			0, 1, 0, 0,
 			0, 0, 1, 0,
 			-wTranslate.x, -wTranslate.y, 0, 1); // inverse translation
+	}
+
+	mat4 Mrotate() {
+		return mat4(cosf(rotate), sinf(rotate), 0, 0,
+					-sinf(rotate), cosf(rotate), 0, 0,
+					 0, 0, 1, 0,
+					 0, 0, 0, 1); // rotation
+	
+	}
+	/*mat4 Mkullok() {
+		return mat4(1, 0, 0, 0,
+					0, 1, 0, 0,
+					0, 0, 1, 0,
+					wTranslate.x, wTranslate.y, 0, 1)* Mrotate(); // translation
+	}*/
+
+	mat4 Mkullok() {
+		return M()*Minv()*mat4(cosf(rotate), sinf(rotate), 0, 0,
+							  -sinf(rotate), cosf(rotate), 0, 0,
+							   0, 0, 0, 0,
+								0, 0, 0, 1)*M(); // translation
 	}
 
 	void AddPointByCord(float x, float y) {
@@ -529,6 +558,7 @@ public:
 	void makekullok() {
 		glBindVertexArray(kullovao);
 		for (float i = 0.0f; i <= 2 * PI; i += 2 * PI / 6) {
+			
 			kullodata.push_back(cos(i)*radius + center.x);
 			kullodata.push_back(sin(i)*radius + center.y);
 			kullodata.push_back(0); // red
@@ -565,7 +595,14 @@ public:
 		wTranslate = wTranslate + wT;
 		center = center + wT;
 	}
-
+	void rotateKulloData() {
+		for (int i = 0; i < kullodata.size() - 4; i += 10) {
+			float x = kullodata[i] - center.x;
+			float y = kullodata[i+1] - center.y;
+			kullodata[i] = x*cosf(rotate) - y*sinf(rotate) + center.x;
+			kullodata[i + 1] = x * sinf(rotate) + y * cosf(rotate) + center.y;
+		}
+	}
 	void Draw() {
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		glUniform4f(location, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -573,6 +610,7 @@ public:
 			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
 			mat4 MVPTransform = M() * camera.V() * camera.P();
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
+			
 			glBindVertexArray(vao);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glLineWidth(3.0f);
@@ -583,13 +621,19 @@ public:
 
 		if (kullodata.size() > 0) {
 			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
+			//rotateKulloData();
+			//printvector(kullodata);
+			
 			mat4 MVPTransform = M() * camera.V() * camera.P();
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 			glBindVertexArray(kullovao);
 			glBindBuffer(GL_ARRAY_BUFFER,kullovbo);
+			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
+			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
 			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
 			glLineWidth(2.0f);
+			
 		//	glBufferData(GL_ARRAY_BUFFER)
 
 		}
@@ -663,7 +707,7 @@ void onDisplay() {
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
-		linestrip.moveCenterByVec();
+		linestrip.moveCenterByVec(vec2(0.1,0.0f));
 		glutPostRedisplay();
 	}
 }
