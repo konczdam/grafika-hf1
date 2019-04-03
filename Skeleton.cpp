@@ -223,7 +223,8 @@ public:
 		ts.push_back((float)wCtrlPoints.size());
 		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv();
 		wCtrlPoints.push_back(wVertex);
-		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+		//qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+		sortControlpoints();
 	}
 
 	 void AddControlPointByCord(float cX, float cY) {
@@ -276,7 +277,17 @@ public:
 		}
 
 	}
-
+		void sortControlpoints() {
+			for (int i = wCtrlPoints.size() - 1; i > 0; i--) {
+				for (int j = 0; j < i - 1; j++) {
+					if (wCtrlPoints[j].x > wCtrlPoints[j + 1].x) {
+						vec4 Temp = wCtrlPoints[j];
+						wCtrlPoints[j] = wCtrlPoints[j+1];
+						wCtrlPoints[j + 1] = Temp;
+					}
+				}
+			}
+	}
 		float calculateY(float x) {
 			vec4* leftside = &wCtrlPoints[0];
 			vec4* actual = &wCtrlPoints[1];
@@ -297,7 +308,23 @@ public:
 				printf("gebasz");
 			}
 			//Choosing Tangent Vectors
-			
+			for (int i = 0; i < wCtrlPoints.size(); i++) {
+				if (wCtrlPoints[i].x == leftside->x &&wCtrlPoints[i + 3].x != toTheToRight->x) {
+					printf("leftside: %d", i);
+				if (wCtrlPoints[i + 3].x != toTheToRight->x)
+					printf("totheright: %d, to the right is not  correct! \n", i+3);
+
+				}
+			}
+			for (int i = 0; i < wCtrlPoints.size()-1; i++) {
+				if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x) {
+					printf("gebasz detected!\n");
+					qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+					sortControlpoints();
+					if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x)
+						printf("gebasz not fixed!!");
+				}
+			}
 
 			float deltaI = rightside->x - actual->x;
 			//incoming target vector
@@ -663,5 +690,5 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
-	long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
+	//long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
 }

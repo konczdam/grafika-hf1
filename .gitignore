@@ -1,0 +1,8 @@
+Debug/
+Release/
+*.vcx*
+*.h
+*.log
+*.obj
+*.tlog
+framework.cpp

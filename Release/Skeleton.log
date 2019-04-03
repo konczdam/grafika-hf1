@@ -2,14 +2,16 @@
 d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(176): warning C4018: '<': signed/unsigned mismatch
 d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(183): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
 d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(184): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(417): warning C4305: 'initializing': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(421): warning C4305: 'argument': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(422): warning C4305: 'argument': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(423): warning C4305: 'argument': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(465): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(311): warning C4018: '<': signed/unsigned mismatch
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(319): warning C4018: '<': signed/unsigned mismatch
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(445): warning C4305: 'initializing': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(449): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(450): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(451): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(493): warning C4305: 'argument': truncation from 'double' to 'float'
   Generating code
-  4 of 235 functions ( 1.7%) were compiled, the rest were copied from previous compilation.
+  6 of 236 functions ( 2.5%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    7 functions had inline decision re-evaluated but remain unchanged
+    4 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Skeleton.vcxproj -> D:\bme\grafika\hf1\Programs\Skeleton\bin\Skeleton.exe
