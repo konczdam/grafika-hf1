@@ -2,11 +2,14 @@
 d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(176): warning C4018: '<': signed/unsigned mismatch
 d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(183): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
 d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(184): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(415): warning C4305: 'initializing': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(458): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(417): warning C4305: 'initializing': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(421): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(422): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(423): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(465): warning C4305: 'argument': truncation from 'double' to 'float'
   Generating code
-  1 of 238 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
+  4 of 235 functions ( 1.7%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+    7 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Skeleton.vcxproj -> D:\bme\grafika\hf1\Programs\Skeleton\bin\Skeleton.exe

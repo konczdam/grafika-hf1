@@ -282,7 +282,7 @@ public:
 			vec4* actual = &wCtrlPoints[1];
 			vec4* rightside = nullptr;
 			vec4* toTheToRight = nullptr;
-			for (unsigned int i = 2; i < wCtrlPoints.size() - 1; i++) {
+			for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
 				if (wCtrlPoints[i].x > x ) {
 					leftside = &wCtrlPoints[i-2];
 					actual = &wCtrlPoints[i-1];
@@ -292,10 +292,13 @@ public:
 				}
 			}
 
-			if (rightside == nullptr)
+			if (rightside == nullptr) {
 				return -6.2f;
+				printf("gebasz");
+			}
 			//Choosing Tangent Vectors
 			
+
 			float deltaI = rightside->x - actual->x;
 			//incoming target vector
 			//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
@@ -406,20 +409,25 @@ public:
 	}
 };
 
-class LineStrip {
+class Biker {
 	GLuint				vao, kullovao, vbo, kullovbo;	// vertex array object, vertex buffer object
 	std::vector<float>  vertexData, kullodata; // interleaved data of coordinates and colors
 	vec2			    wTranslate;
 	vec2 center;
 	float radius;
 	float PI = 3.14159265358979323846; // a PI értékét az internetrõl másoltam, nem saját magam számoltam
+	vec4 offset = vec4(0, 0, 0, 0);
 public:
+	void moveCenterByVec() {
+		center = center + vec2(0.2, 0);
+		wTranslate = wTranslate + vec2(0.2, 0);
+		offset = offset + vec4(0.1, 0, 0, 0);
+		//wTranslate.x = wTranslate.x + 0.2f;
+	}
 	void Create() {
 		
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-
-		
 
 		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -526,7 +534,10 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 	}
 
-	void AddTranslation(vec2 wT) { wTranslate = wTranslate + wT; }
+	void AddTranslation(vec2 wT) {
+		wTranslate = wTranslate + wT;
+		center = center + wT;
+	}
 
 	void Draw() {
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
@@ -552,87 +563,15 @@ public:
 			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
 			glLineWidth(2.0f);
+		//	glBufferData(GL_ARRAY_BUFFER)
 
 		}
 	}
 };
 
 
-class Biker {
-	KochanekBartelsSpline* spline;
-	unsigned int vao, vbo;
-	unsigned int rotation =0;
-	vec2 center;
-	float radius;
-	std::vector<float> vertexData;
-	vec2 wTranslate;
-	mat4 M() {
-		return mat4(1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			wTranslate.x, wTranslate.y, 0, 1); // translation
-	}
-public:
-	void setSpline(KochanekBartelsSpline* sp) {
-		spline = sp;
-	}
-	void Create() {
-		glGenVertexArrays(1, &vao);	// create 1 vertex array object
-		glBindVertexArray(vao);		// make it active
-
-		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-		glEnableVertexAttribArray(0);  // attribute array 0
-		glEnableVertexAttribArray(1);  // attribute array 1
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
-		// Map attribute array 1 to the color data of the interleaved vbo
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
-		center = vec2(0, 5.0f);
-		radius = 2.0f;
-		int location = glGetUniformLocation(gpuProgram.getId(), "color");
-		glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f);
-		
-	}
-	void AddPointByCord(float cX, float cY) {
-		// input pipeline
-		// fill interleaved data
-		vertexData.push_back(cX);
-		vertexData.push_back(cY);
-		vertexData.push_back(1); // red
-		vertexData.push_back(1); // green
-		vertexData.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-		int location = glGetUniformLocation(gpuProgram.getId(), "color");
-		glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f);
-	}
-
-	void makeCircle() {
-		for (float i = 0.0f; i <= 3.1415f; i += 3.1415f / 20) {
-			AddPointByCord(cos(i)*radius + center.x, sin(i)*radius + center.y);
-		}
-	}
-	void Draw() {
-		if (vertexData.size() > 0) {
-			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			mat4 MVPTransform = M() * camera.V() * camera.P();
-			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
-			glBindVertexArray(vao);
-			makeCircle();
-			glLineWidth(5.0f); // Width of lines in pixels
-			glDrawArrays(GL_LINE_STRIP, 0, vertexData.size() / 5);
-
-		}
-	
-	}
-};
-// Initialization, create an OpenGL context
-Biker* biker;
 TexturedQuad quad;
-LineStrip linestrip;
+Biker linestrip;
 
 void onInitialization() {
 	quad.Create();
@@ -642,8 +581,6 @@ void onInitialization() {
 
 // Create objects by setting up their vertex data on the GPU
 	kb = new KochanekBartelsSpline(-1.0f, 0, 0);
-	biker = new Biker();
-	biker->Create();
 
 	glGenVertexArrays(1, &vao);	// get 1 vao id
 	glBindVertexArray(vao);		// make it active
@@ -692,14 +629,16 @@ void onDisplay() {
 	quad.Draw();
 	gpuProgram.Use();
 	kb->Draw();
-	biker->Draw();
 	linestrip.Draw();
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
-	if (key == 'd') glutPostRedisplay();         // if d, invalidate display, i.e. redraw
+	if (key == 'd') {
+		linestrip.moveCenterByVec();
+		glutPostRedisplay();
+	}
 }
 
 // Key of ASCII code released
