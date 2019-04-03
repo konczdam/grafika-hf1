@@ -446,12 +446,12 @@ class Biker {
 	float radius;
 	vec4 offset = vec4(0, 0, 0, 0);
 	float rotate = 0;
+	Orientation orientation = right;
 	float CalculateRotation(vec2 asd) {
 		float circumference = 2 * radius * M_PI;
 		float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
 		return -2 * M_PI*motion / circumference;
 	}
-	Orientation orientation = right;
 public:
 	void moveCenterByVec(vec2 asd) {
 		orientation = asd.x > 0 ? right : left;
@@ -541,7 +541,6 @@ public:
 	}
 
 
-
 	void AddPointByCord(float x, float y) {
 		vertexData.push_back(x);
 		vertexData.push_back(y);
@@ -596,7 +595,9 @@ public:
 	void makeBody() {
 		glBindVertexArray(vaobody);
 		
-		float thigh = 1.6f;
+		makeLeg(left);
+		makeLeg(right);
+		/*float thigh = 1.6f;
 		float shin = 1.7f;
 		const vec2 P1 = vec2(center.x, center.y + 2.2f);
 		const vec2 P2 = vec2(cos(rotate)*radius*0.75 + center.x, sin(rotate)*radius*0.75 + center.y);
@@ -606,12 +607,7 @@ public:
 		float centerDx = P1.x - P2.x;
 		float centerDy = P1.y - P2.y;
 		float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
-		printf("ar: %f\n", r);
-		/*if (!(fabsf(thigh - shin) <= r && r <= thigh + shin)); {
-			printf("bad parameters!!");
-			printf("\nR: %f", R);
-			return;
-		}*/
+		
 		float r2d = r * r;
 		float r4d = r2d * r2d;
 		float rThighSquared = thigh * thigh;
@@ -635,35 +631,55 @@ public:
 
 		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
 		addPointToBuffer(ix1, iy1, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
-		printf("%d\n", bodydata.size());
-	/*	bodydata.push_back(P1.x);
-		bodydata.push_back(P1.y);
-		bodydata.push_back(0); // red
-		bodydata.push_back(0); // green
-		bodydata.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
-		glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);
-		
-		bodydata.push_back(ix1);
-		bodydata.push_back(iy1);
-		bodydata.push_back(0); // red
-		bodydata.push_back(0); // green
-		bodydata.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
-		glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);
+		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);*/
 
-		bodydata.push_back(P2.x);
-		bodydata.push_back(P2.y);
-		bodydata.push_back(0); // red
-		bodydata.push_back(0); // green
-		bodydata.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
-		glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);*/
  	}
+
+	void makeLeg(Orientation leg) {
+		float offset = M_PI / 2 * leg;
+		float thigh = 1.6f;
+		float shin = 1.7f;
+		const vec2 P1 = vec2(center.x, center.y + 2.2f);
+		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75 + center.x, sin(rotate + offset)*radius*0.75 + center.y);
+		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
+		//vec2 a = vec2((P2.x - P1.x) / R,  (P2.y - P1.y) / R);
+		//vec2 b = vec2((P2.y - P1.y) / R, -(P2.x - P1.x) / R);
+		float centerDx = P1.x - P2.x;
+		float centerDy = P1.y - P2.y;
+		float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
+
+		float r2d = r * r;
+		float r4d = r2d * r2d;
+		float rThighSquared = thigh * thigh;
+		float rShinSquared = shin * shin;
+		float a = (rThighSquared - rShinSquared) / (2 * r2d);
+		float r2r2 = (rThighSquared - rShinSquared);
+		float c = sqrtf(2 * (rThighSquared + rShinSquared) / r2d - (r2r2 * r2r2) / r4d - 1);
+
+		float fx = (P1.x + P2.x) / 2 + a * (P2.x - P1.x);
+		float gx = c * (P2.y - P1.y) / 2;
+
+		float ix1 = fx + gx;
+		float ix2 = fx - gx;
+
+		float fy = (P1.y + P2.y) / 2 + a * (P2.y - P1.y);
+		float gy = c * (P1.x - P2.x) / 2;
+
+		float iy1 = fy + gy;
+		float iy2 = fy - gy;
+		printf("ágyék-térd távolság: %f\n", sqrtf(powf(P1.x - ix1, 2) + powf(P1.y - iy1, 2)));
+
+		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy2);
+
+		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
+
+	}
+
+
 	void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
 		tarolo.push_back(x);
 		tarolo.push_back(y);
