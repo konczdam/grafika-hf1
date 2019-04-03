@@ -386,7 +386,10 @@ float KochanekBartelsSpline::H3(float s) {
 KochanekBartelsSpline* kb;
 
 
-
+enum  Orientation {
+	left = -1,
+	right = 1
+};
 
 
 class TexturedQuad {
@@ -446,13 +449,15 @@ class Biker {
 	float CalculateRotation(vec2 asd) {
 		float circumference = 2 * radius * M_PI;
 		float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
-		return 2 * M_PI*motion / circumference;
+		return -2 * M_PI*motion / circumference;
 	}
+	Orientation orientation = right;
 public:
 	void moveCenterByVec(vec2 asd) {
+		orientation = asd.x > 0 ? right : left;
 		center = center + asd;
 		wTranslate = wTranslate + asd;
-		rotate += (asd.x<0? 1: -1)*CalculateRotation(asd);
+		rotate += orientation*CalculateRotation(asd);
 	}
 	void Create() {
 		
