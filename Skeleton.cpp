@@ -385,13 +385,22 @@ float KochanekBartelsSpline::H3(float s) {
 
 KochanekBartelsSpline* kb;
 
-
 enum  Orientation {
 	left = -1,
 	right = 1
 };
 
 
+void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
+		tarolo.push_back(x);
+		tarolo.push_back(y);
+		tarolo.push_back(rgb.x);
+		tarolo.push_back(rgb.y);
+		tarolo.push_back(rgb.z);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
+
+	}
 class TexturedQuad {
 	unsigned int vao, vbo[2];
 	vec2 vertices[4], uvs[4];
@@ -447,15 +456,20 @@ class Biker {
 	vec4 offset = vec4(0, 0, 0, 0);
 	float rotate = 0;
 	Orientation orientation = right;
+	KochanekBartelsSpline* kb;
 	float CalculateRotation(vec2 asd) {
 		float circumference = 2 * radius * M_PI;
 		float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
 		return -2 * M_PI*motion / circumference;
 	}
 public:
+	void setSpline(KochanekBartelsSpline* kb) {
+		this->kb = kb;
+	}
 	void moveCenterByVec(vec2 asd) {
 		orientation = asd.x > 0 ? right : left;
 		center = center + asd;
+		center.y = kb->calculateY(center.x)+0.69f;
 		wTranslate = wTranslate + asd;
 		rotate += orientation*CalculateRotation(asd);
 	}
@@ -475,7 +489,7 @@ public:
 
 		// copy data to the GPU
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 
 
 		{
@@ -511,8 +525,7 @@ public:
 		}
 
 
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBindVertexArray(vao);
+	
 		center = vec2(-5.2, -2.45f);
 		radius = 0.8f;
 		makeCircle();
@@ -553,6 +566,8 @@ public:
 	}
 
 	void makeCircle() {
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBindVertexArray(vao);
 		for (float i = 0.0f; i <= 2*M_PI; i += 2*M_PI / 100) {
 			AddPointByCord(cos(i)*radius + center.x, sin(i)*radius + center.y);
 		}
@@ -597,42 +612,9 @@ public:
 		
 		makeLeg(left);
 		makeLeg(right);
-		/*float thigh = 1.6f;
-		float shin = 1.7f;
-		const vec2 P1 = vec2(center.x, center.y + 2.2f);
-		const vec2 P2 = vec2(cos(rotate)*radius*0.75 + center.x, sin(rotate)*radius*0.75 + center.y);
-		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
-		//vec2 a = vec2((P2.x - P1.x) / R,  (P2.y - P1.y) / R);
-		//vec2 b = vec2((P2.y - P1.y) / R, -(P2.x - P1.x) / R);
-		float centerDx = P1.x - P2.x;
-		float centerDy = P1.y - P2.y;
-		float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
-		
-		float r2d = r * r;
-		float r4d = r2d * r2d;
-		float rThighSquared = thigh * thigh;
-		float rShinSquared = shin * shin;
-		float a = (rThighSquared - rShinSquared) / (2 * r2d);
-		float r2r2 = (rThighSquared - rShinSquared);
-		float c = sqrtf(2 * (rThighSquared + rShinSquared) / r2d - (r2r2 * r2r2) / r4d - 1);
-
-		float fx = (P1.x + P2.x) / 2 + a * (P2.x - P1.x);
-		float gx = c * (P2.y - P1.y) / 2;
-		
-		float ix1 = fx + gx;
-		float ix2 = fx - gx;
-
-		float fy = (P1.y + P2.y) / 2 + a * (P2.y - P1.y);
-		float gy = c * (P1.x - P2.x) / 2;
-
-		float iy1 = fy + gy;
-		float iy2 = fy - gy;
-
-
-		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(ix1, iy1, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);*/
-
+		addPointToBuffer(center.x + 0.3f, center.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+		printf("%f\n", center.x);
+		addPointToBuffer(center.x - 0.3f, center.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
  	}
 
 	void makeLeg(Orientation leg) {
@@ -642,8 +624,6 @@ public:
 		const vec2 P1 = vec2(center.x, center.y + 2.2f);
 		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75 + center.x, sin(rotate + offset)*radius*0.75 + center.y);
 		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
-		//vec2 a = vec2((P2.x - P1.x) / R,  (P2.y - P1.y) / R);
-		//vec2 b = vec2((P2.y - P1.y) / R, -(P2.x - P1.x) / R);
 		float centerDx = P1.x - P2.x;
 		float centerDy = P1.y - P2.y;
 		float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
@@ -667,11 +647,9 @@ public:
 
 		float iy1 = fy + gy;
 		float iy2 = fy - gy;
-		if(leg == 1)
-			printf("egyik: %f , %f\n", ix2, iy2);
-		else
-			printf("masik:: %f , %f\n", ix1, iy1);
+
 		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy1);
+
 		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
 		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
 		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
@@ -681,23 +659,15 @@ public:
 	}
 
 
-	void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
-		tarolo.push_back(x);
-		tarolo.push_back(y);
-		tarolo.push_back(rgb.x);
-		tarolo.push_back(rgb.y);
-		tarolo.push_back(rgb.z);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
-
-	}
 
 	void Draw() {
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		glUniform4f(location, 0.0f, 0.0f, 0.0f, 1.0f);
 		if (vertexData.size() > 0) {
+			vertexData.clear();
+			makeCircle();
 			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			mat4 MVPTransform = M() * camera.V() * camera.P();
+			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 			
 			glBindVertexArray(vao);
@@ -716,7 +686,6 @@ public:
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 			glBindVertexArray(kullovao);
 			glBindBuffer(GL_ARRAY_BUFFER,kullovbo);
-			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
 			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
 			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
@@ -745,12 +714,13 @@ Biker linestrip;
 
 void onInitialization() {
 	quad.Create();
+	kb = new KochanekBartelsSpline(-1.0f, 0, 0);
 	linestrip.Create();
+	linestrip.setSpline(kb);
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(2.0f); // Width of lines in pixels
 
 // Create objects by setting up their vertex data on the GPU
-	kb = new KochanekBartelsSpline(-1.0f, 0, 0);
 
 	glGenVertexArrays(1, &vao);	// get 1 vao id
 	glBindVertexArray(vao);		// make it active
