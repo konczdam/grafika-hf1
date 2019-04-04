@@ -1,21 +1,22 @@
 ﻿  Skeleton.cpp
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(176): warning C4018: '<': signed/unsigned mismatch
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(183): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(184): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(310): warning C4018: '<': signed/unsigned mismatch
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(318): warning C4018: '<': signed/unsigned mismatch
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(461): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(463): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(529): warning C4305: 'argument': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(571): warning C4305: '+=': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(578): warning C4305: '+=': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(621): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(625): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(779): warning C4305: 'argument': truncation from 'double' to 'float'
-d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(783): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(181): warning C4018: '<': signed/unsigned mismatch
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(188): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(189): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(315): warning C4018: '<': signed/unsigned mismatch
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(323): warning C4018: '<': signed/unsigned mismatch
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(346): warning C4101: 'asdasdasd': unreferenced local variable
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(468): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(470): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(536): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(579): warning C4305: '+=': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(586): warning C4305: '+=': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(628): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(632): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(787): warning C4305: 'argument': truncation from 'double' to 'float'
+d:\bme\grafika\hf1\programs\skeleton\skeleton\skeleton.cpp(791): warning C4305: 'argument': truncation from 'double' to 'float'
   Generating code
-  1 of 222 functions ( 0.5%) were compiled, the rest were copied from previous compilation.
+  2 of 223 functions ( 0.9%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+    20 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Skeleton.vcxproj -> D:\bme\grafika\hf1\Programs\Skeleton\bin\Skeleton.exe

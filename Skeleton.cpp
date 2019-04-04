@@ -144,6 +144,11 @@ float H3(float s) {
 	}
 )";
 
+enum  Orientation {
+	left = -1,
+	right = 1
+};
+
 GPUProgram gpuProgram; // vertex and fragment shaders
 GPUProgram backGroundMaker;
 unsigned int vao;	   // virtual world on the GPU
@@ -167,12 +172,12 @@ public:
 Camera2D camera;		// 2D camera
 
 #include <iostream>
-	 void printvector(std::vector<vec4> asd) {
+	 void printvector(const std::vector<vec4>& asd) {
 		 for (auto temp : asd)
 			 std::cout << temp.x << ',' << temp.y << std::endl;
 	 }
 
-	 void printvector(std::vector<float> asd) {
+	 void printvector(const std::vector<float>& asd) {
 		 for (int i = 0; i < asd.size()-4; i+=5)
 			 std::cout << asd[i] << ',' << asd[i+1] << std::endl;
 		 std::cout << "vector ends here" << std::endl;
@@ -338,10 +343,15 @@ public:
 			res += H1((x - actual->x) / deltaI)  *  rightside->y;
 			res += H2((x - actual->x) / deltaI)  * 1 * TiO;
 			res += H3((x - actual->x) / deltaI)  * 1 * TiI ;
+			float asdasdasd;
 			return res;
 			
 		}
-
+		float CalculateDeriative(float x) {
+			float y = calculateY(x);
+			float yp1 = calculateY(x + 0.01f);
+			return -(yp1 - y) / (x - (x + 0.01f));
+		}
 
 };
 KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
@@ -385,10 +395,7 @@ float KochanekBartelsSpline::H3(float s) {
 
 KochanekBartelsSpline* kb;
 
-enum  Orientation {
-	left = -1,
-	right = 1
-};
+
 
 
 void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
@@ -563,6 +570,7 @@ public:
 		// copy data to the GPU
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
+		glutPostRedisplay();
 	}
 
 	void makeCircle() {
@@ -613,7 +621,6 @@ public:
 		makeLeg(left);
 		makeLeg(right);
 		addPointToBuffer(center.x + 0.3f, center.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
-		printf("%f\n", center.x);
 		addPointToBuffer(center.x - 0.3f, center.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
  	}
 
@@ -705,18 +712,19 @@ public:
 			glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
 			glLineWidth(2.0f);
 		}
+		printf("%f\n", kb->CalculateDeriative(center.x) * orientation);
 	}
 };
 
 
 TexturedQuad quad;
-Biker linestrip;
+Biker biker;
 
 void onInitialization() {
 	quad.Create();
 	kb = new KochanekBartelsSpline(-1.0f, 0, 0);
-	linestrip.Create();
-	linestrip.setSpline(kb);
+	biker.Create();
+	biker.setSpline(kb);
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(2.0f); // Width of lines in pixels
 
@@ -769,18 +777,18 @@ void onDisplay() {
 	quad.Draw();
 	gpuProgram.Use();
 	kb->Draw();
-	linestrip.Draw();
+	biker.Draw();
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
-		linestrip.moveCenterByVec(vec2(0.1,0.00f));
+		biker.moveCenterByVec(vec2(0.1,0.00f));
 		glutPostRedisplay();
 	}
 	if (key == 'a') {
-		linestrip.moveCenterByVec(vec2(-0.1, 0.00f));
+		biker.moveCenterByVec(vec2(-0.1, 0.00f));
 		glutPostRedisplay();
 	}
 }
@@ -805,7 +813,14 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	}
 }
 
+const float dt = 0.0f;
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
 	//long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
+/*	static float tend = 0;
+	float tstart = tend;
+	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	for (float t = tstart; t < tend; t += dt) {
+
+	}*/
 }
