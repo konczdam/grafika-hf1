@@ -712,7 +712,7 @@ public:
 			glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
 			glLineWidth(2.0f);
 		}
-		printf("%f\n", kb->CalculateDeriative(center.x) * orientation);
+		//printf("%f\n", kb->CalculateDeriative(center.x) * orientation);
 	}
 };
 
@@ -813,14 +813,17 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	}
 }
 
-const float dt = 0.0f;
+const float dt = 0.01f;
+#include <chrono>
+#include <thread>
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
 	//long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
-/*	static float tend = 0;
+	static float tend = 0;
 	float tstart = tend;
+	float lastFrameTime = tstart;
+	//std::this_thread::sleep_for(std::chrono::milliseconds(600));
 	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 	for (float t = tstart; t < tend; t += dt) {
-
-	}*/
+	}
 }
