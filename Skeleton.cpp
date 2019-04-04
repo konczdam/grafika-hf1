@@ -343,7 +343,6 @@ public:
 			res += H1((x - actual->x) / deltaI)  *  rightside->y;
 			res += H2((x - actual->x) / deltaI)  * 1 * TiO;
 			res += H3((x - actual->x) / deltaI)  * 1 * TiI ;
-			float asdasdasd;
 			return res;
 			
 		}
@@ -352,7 +351,31 @@ public:
 			float yp1 = calculateY(x + 0.01f);
 			return -(yp1 - y) / (x - (x + 0.01f));
 		}
-
+		float CalcDif2(float x) {
+			vec4* leftside = &wCtrlPoints[0];
+			vec4* actual = &wCtrlPoints[1];
+			vec4* rightside = nullptr;
+			vec4* toTheToRight = nullptr;
+			for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
+				if (wCtrlPoints[i].x > x) {
+					leftside = &wCtrlPoints[i - 2];
+					actual = &wCtrlPoints[i - 1];
+					rightside = &wCtrlPoints[i];
+					toTheToRight = &wCtrlPoints[i + 1];
+					break;
+				}
+			}
+			float deltaI = rightside->x - actual->x;
+			float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
+			float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+			float res = 0;
+			float s = ((x - actual->x) / deltaI);
+			res += (6 * s*s - 6 * s) * (x / deltaI) * actual->y;
+			res +=(-6 * s*s + 6 * s) * (x / deltaI) *  rightside->y;
+			res += (3 * s*s - 4 * s + 1) * (x / deltaI) *deltaI* TiO;
+			res += (3 * s*s - 2 * s) * (x / deltaI) *deltaI* TiI;
+			return res;
+		}
 };
 KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
 	tension(t), continuity(c), bias(b){
@@ -458,7 +481,7 @@ class Biker {
 	GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
 	std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
 	vec2			    wTranslate;
-	vec2 center;
+	vec2 center, drawingcentre;
 	float radius;
 	vec4 offset = vec4(0, 0, 0, 0);
 	float rotate = 0;
@@ -474,14 +497,38 @@ public:
 		this->kb = kb;
 	}
 	void moveCenterByVec(vec2 asd) {
+		/*
 		orientation = asd.x > 0 ? right : left;
 		center = center + asd;
 		center.y = kb->calculateY(center.x)+0.69f;
+		rotate += orientation*CalculateRotation(asd);*/
+		printf("center: %f, %f\n", center.x, center.y);
+
+		orientation = asd.x > 0 ? right : left;
+		int ori = orientation;
+		center = center + asd;
+		float derivative = orientation * kb->CalculateDeriative(center.x);
+		printf("deriative: %f\n", derivative);
+		float alpha = atanf(derivative);
+		vec2 N = vec2(-sinf(alpha), cosf(alpha));
+		float denim = sqrtf(N.x*N.x + N.y * N.y);
+		printf("denim: %f\n", denim);
+		//N.x = N.x / denim;
+		//N.y = N.y / denim;
+		N = N * (1 / denim);
+		printf("alpha:%f, N: %f, %f\n", alpha, N.x, N.y);
+
+		drawingcentre = center + (N * radius);
+
+		//center.y = kb->calculateY(center.x) + 0.69f;
 		wTranslate = wTranslate + asd;
-		rotate += orientation*CalculateRotation(asd);
+		rotate += orientation * CalculateRotation(asd);
 	}
+
+	
+
 	void Create() {
-		
+
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
@@ -532,12 +579,42 @@ public:
 		}
 
 
-	
-		center = vec2(-5.2, -2.45f);
 		radius = 0.8f;
+		drawingcentre = vec2(2.4+radius, -2.45f);
+		center = vec2(2.4, -2.45f);
 		makeCircle();
 		makekullok();
 		makeBody();
+	}
+	void moveRight() {
+		float F = 12;
+		float m = 1;
+		float g = 9.8;
+		float derivative = orientation * kb->CalculateDeriative(center.x);
+		float alpha = atanf(derivative);
+		vec2 V = vec2(cosf(alpha), sinf(alpha));
+		float denim = sqrtf(V.x*V.x + V.y * V.y);
+		V = V * (1 / (200*denim));
+		float rho = 0.5f;
+		float v = (F - m * g*sin(alpha)) / rho;
+		printf("v*V:%f, %f\n", (V*v).x, (V*v).y);
+		moveCenterByVec(V*v);
+	}
+
+	void moveLeft() {
+		orientation = left;
+		float F = 12;
+		float m = 1;
+		float g = 9.8;
+		float derivative = orientation * kb->CalculateDeriative(center.x);
+		float alpha = atanf(derivative);
+		vec2 V = vec2(-cosf(alpha), sinf(alpha));
+		float denim = sqrtf(V.x*V.x + V.y * V.y);
+		V = V * (1 / (200 * denim));
+		float rho = 0.5f;
+		float v = (F - m * g*sin(alpha)) / rho;
+		printf("v*V:%f, %f\n", (V*v).x, (V*v).y);
+		moveCenterByVec(V*v);
 	}
 
 
@@ -577,23 +654,23 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindVertexArray(vao);
 		for (float i = 0.0f; i <= 2*M_PI; i += 2*M_PI / 100) {
-			AddPointByCord(cos(i)*radius + center.x, sin(i)*radius + center.y);
+			AddPointByCord(cos(i)*radius + drawingcentre.x, sin(i)*radius + drawingcentre.y);
 		}
 	}
 
 	void makekullok() {
 		glBindVertexArray(kullovao);
 		for (float i = 0.0f; i <= 2 * M_PI; i += 2 * M_PI / 6) {
-			kullodata.push_back(cos(i+rotate)*radius + center.x);
-			kullodata.push_back(sin(i+rotate)*radius + center.y);
+			kullodata.push_back(cos(i+rotate)*radius + drawingcentre.x);
+			kullodata.push_back(sin(i+rotate)*radius + drawingcentre.y);
 			kullodata.push_back(0); // red
 			kullodata.push_back(0); // green
 			kullodata.push_back(0); // blue
 			// copy data to the GPU
 			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
 			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
-			kullodata.push_back(center.x);
-			kullodata.push_back(center.y);
+			kullodata.push_back(drawingcentre.x);
+			kullodata.push_back(drawingcentre.y);
 			kullodata.push_back(0); // red
 			kullodata.push_back(0); // green
 			kullodata.push_back(0); // blue
@@ -620,16 +697,16 @@ public:
 		
 		makeLeg(left);
 		makeLeg(right);
-		addPointToBuffer(center.x + 0.3f, center.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(center.x - 0.3f, center.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(drawingcentre.x + 0.3f, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(drawingcentre.x - 0.3f, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
  	}
 
 	void makeLeg(Orientation leg) {
 		float offset = M_PI / 2 * leg;
 		float thigh = 1.6f;
 		float shin = 1.7f;
-		const vec2 P1 = vec2(center.x, center.y + 2.2f);
-		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75 + center.x, sin(rotate + offset)*radius*0.75 + center.y);
+		const vec2 P1 = vec2(drawingcentre.x, drawingcentre.y + 2.2f);
+		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75 + drawingcentre.x, sin(rotate + offset)*radius*0.75 + drawingcentre.y);
 		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
 		float centerDx = P1.x - P2.x;
 		float centerDy = P1.y - P2.y;
@@ -784,11 +861,12 @@ void onDisplay() {
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
-		biker.moveCenterByVec(vec2(0.1,0.00f));
+		
+		biker.moveRight();
 		glutPostRedisplay();
 	}
 	if (key == 'a') {
-		biker.moveCenterByVec(vec2(-0.1, 0.00f));
+		biker.moveLeft();
 		glutPostRedisplay();
 	}
 }
