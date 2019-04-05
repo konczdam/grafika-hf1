@@ -531,13 +531,14 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
 		std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
 		vec2			    wTranslate;
+		vec2 shoulderCenter;
 		vec2 center, drawingcentre;
 		float radius;
 		vec4 offset = vec4(0, 0, 0, 0);
 		float rotate = 0;
 		Orientation orientation = right;
 		KochanekBartelsSpline* kb;
-		float timePassed = 0;
+		float timePassedSinceStart = 0;
 
 		float CalculateRotation(vec2 asd) {
 			float circumference = 2 * radius * PI;
@@ -723,7 +724,6 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		vertexData.push_back(0); // red
 		vertexData.push_back(0); // green
 		vertexData.push_back(0); // blue
-		// copy data to the GPU
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 		glutPostRedisplay();
@@ -740,105 +740,84 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 	void makekullok() {
 		glBindVertexArray(kullovao);
 		for (float i = 0.0f; i <= 2 * PI; i += 2 * PI / 6) {
-			kullodata.push_back(cos(i+rotate)*radius + drawingcentre.x);
-			kullodata.push_back(sin(i+rotate)*radius + drawingcentre.y);
-			kullodata.push_back(0); // red
-			kullodata.push_back(0); // green
-			kullodata.push_back(0); // blue
-			// copy data to the GPU
-			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
-			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
-			kullodata.push_back(drawingcentre.x);
-			kullodata.push_back(drawingcentre.y);
-			kullodata.push_back(0); // red
-			kullodata.push_back(0); // green
-			kullodata.push_back(0); // blue
-			// copy data to the GPU
-			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
-			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
+			addPointToBuffer(cos(i + rotate)*radius + drawingcentre.x, sin(i + rotate)*radius + drawingcentre.y, kullodata, vec3(0, 0, 0), kullovbo);
+			addPointToBuffer(drawingcentre.x, drawingcentre.y, kullodata, vec3(0, 0, 0), kullovbo);
 		}
-	}
-	void AddPoint(float cX, float cY) {
-		// input pipeline
-		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv() * Minv();
-		// fill interleaved data
-		vertexData.push_back(wVertex.x);
-		vertexData.push_back(wVertex.y);
-		vertexData.push_back(0); // red
-		vertexData.push_back(0); // green
-		vertexData.push_back(0); // blue
-		// copy data to the GPU
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 	}
 	void makeBody() {
 		glBindVertexArray(vaobody);
-		
 		makeLeg(left);
 		makeLeg(right);
-		addPointToBuffer(drawingcentre.x + 0.3f, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(drawingcentre.x - 0.3f, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+		makeSeat();
+		glLineWidth(1.5f);
+		makeUpperBody();
  	}
 
-	void makeLeg(Orientation leg) {
-		float offset = PI / 2 * leg;
-		float thigh = 1.6f;
-		float shin = 1.7f;
-		const vec2 P1 = vec2(drawingcentre.x, drawingcentre.y + 2.2f);
-		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
-		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
-		float centerDx = P1.x - P2.x;
-		float centerDy = P1.y - P2.y;
-		float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
-
-		float r2d = r * r;
-		float r4d = r2d * r2d;
-		float rThighSquared = thigh * thigh;
-		float rShinSquared = shin * shin;
-		float a = (rThighSquared - rShinSquared) / (2 * r2d);
-		float r2r2 = (rThighSquared - rShinSquared);
-		float c = sqrtf(2 * (rThighSquared + rShinSquared) / r2d - (r2r2 * r2r2) / r4d - 1);
-
-		float fx = (P1.x + P2.x) / 2 + a * (P2.x - P1.x);
-		float gx = c * (P2.y - P1.y) / 2;
-
-		float ix1 = fx + gx;
-		float ix2 = fx - gx;
-
-		float fy = (P1.y + P2.y) / 2 + a * (P2.y - P1.y);
-		float gy = c * (P1.x - P2.x) / 2;
-
-		float iy1 = fy + gy;
-		float iy2 = fy - gy;
-
-		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy1);
-
-		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
-		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
-
+	void makeUpperBody() {
+		shoulderCenter.x = drawingcentre.x + 0.9f * (cosf(timePassedSinceStart))/3;
+		const float c = 2.18f;
+		const float b = fabsf(drawingcentre.x - shoulderCenter.x);
+		const float a = sqrtf(powf(c, 2) - powf(b, 2));
+		printf("a: %f\n", a);
+		shoulderCenter.y = drawingcentre.y + 2.18f + a;// *(PI / 4.0f + (cos(timePassedSinceStart)) / 20);
+		addPointToBuffer(shoulderCenter.x, shoulderCenter.y , bodydata, vec3(0, 0, 0), vbobody);
 	}
 
+	void makeSeat() {
+		addPointToBuffer(drawingcentre.x + 0.3f, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(drawingcentre.x - 0.3f, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(drawingcentre.x, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
+	}
 
+		const float thighBoneLength = 1.6f;
+		const float shinBoneLength = 1.7f;
+	void makeLeg(const Orientation leg) {
+		const float offset = PI / 2 * leg;
+		const vec2 P1 = vec2(drawingcentre.x, drawingcentre.y + 2.2f);
+		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
+		const float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
+		const float centerDx = P1.x - P2.x;
+		const float centerDy = P1.y - P2.y;
+		const float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
+		const float r2d = r * r;
+		const float r4d = r2d * r2d;
+		const float rThighSquared = thighBoneLength * thighBoneLength;
+		const float rShinSquared = shinBoneLength * shinBoneLength;
+		const float a = (rThighSquared - rShinSquared) / (2 * r2d);
+		const float r2r2 = (rThighSquared - rShinSquared);
+		const float c = sqrtf(2 * (rThighSquared + rShinSquared) / r2d - (r2r2 * r2r2) / r4d - 1);
+		const float fx = (P1.x + P2.x) / 2 + a * (P2.x - P1.x);
+		const float gx = c * (P2.y - P1.y) / 2;
+		const float ix1 = fx + gx;
+		const float ix2 = fx - gx;
+		const float fy = (P1.y + P2.y) / 2 + a * (P2.y - P1.y);
+		const float gy = c * (P1.x - P2.x) / 2;
+		const float iy1 = fy + gy;
+		const float iy2 = fy - gy;
+
+		vec2 asd = orientation == right ?  vec2(ix2, iy2) :  vec2(ix1, iy1);
+
+		addPointToBuffer(P1.x, P1.y, bodydata,  vec3(0, 0, 0), vbobody);
+		addPointToBuffer(asd.x, asd.y, bodydata,   vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P2.x, P2.y, bodydata,   vec3(0, 0, 0), vbobody);
+		addPointToBuffer(asd.x, asd.y, bodydata,  vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P1.x, P1.y, bodydata,   vec3(0, 0, 0), vbobody);
+	}
 
 	void Draw() {
+			glLineWidth(3.0f);
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
+		clearPreviousData();
 		glUniform4f(location, 0.0f, 0.0f, 0.0f, 1.0f);
 		if (vertexData.size() > 0) {
 			vertexData.clear();
 			makeCircle();
 			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
 			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
-			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
-			
+			MVPTransform.SetUniform(gpuProgram.getId(),  "MVP");
 			glBindVertexArray(vao);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glLineWidth(3.0f);
-			glDrawArrays(GL_LINE_LOOP, 0, vertexData.size() / 5);
-			glLineWidth(2.0f);
-
+			glDrawArrays(GL_LINE_LOOP, 0,vertexData.size() / 5);
 		}
 
 		if (kullodata.size() > 0) {
@@ -850,9 +829,7 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 			glBindVertexArray(kullovao);
 			glBindBuffer(GL_ARRAY_BUFFER,kullovbo);
 			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
-			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
-			glLineWidth(2.0f);
 		}
 
 		if (bodydata.size() > 0) {
@@ -861,13 +838,11 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 			makeBody();
 			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
 			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
-
 			glBindVertexArray(vaobody);
 			glBindBuffer(GL_ARRAY_BUFFER, vbobody);
-			glLineWidth(3.0f);
 			glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
-			glLineWidth(2.0f);
 		}
+			glLineWidth(2.0f);
 	}
 
 	vec2 getCentre() {
@@ -875,18 +850,18 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 	}
 	void AddTranslation(vec2 wT) { wTranslate = wTranslate + wT; }
 	int movemeghiv = 0;
+	float timePassedSinceLastFrame = 0;
 	void animate(float et) {
-		timePassed += et;
-		if (timePassed > 0.02f) {
-			timePassed = 0;
+		timePassedSinceStart += et;
+		timePassedSinceLastFrame += et;
+		if (timePassedSinceLastFrame > 0.02f) {
+			timePassedSinceLastFrame = 0;
 			if (isAtEdge() && !justChangedOrientation) {
 				changeOrientation();
 				justChangedOrientation = true;
 			}
 			Move();
 			movemeghiv++;
-			
-
 			if (movesSinceLastChange > 50) {
 				justChangedOrientation = false;
 				movesSinceLastChange = 0;
@@ -896,6 +871,10 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		}
 	}
 private:
+	void clearPreviousData() {
+
+	}
+
 	bool justChangedOrientation = false;
 	unsigned short movesSinceLastChange = 0;
 	bool isAtEdge() {
@@ -918,17 +897,15 @@ Biker biker;
 		vec2 vertices[4], uvs[4];
 	public:
 		TexturedQuad() {
-			vertices[0] = vec2(-15, -15); uvs[0] = vec2(0, 0);
-			vertices[1] = vec2(15, -15);  uvs[1] = vec2(1, 0);
-			vertices[2] = vec2(15, 15);   uvs[2] = vec2(1, 1);
-			vertices[3] = vec2(-15, 15);  uvs[3] = vec2(0, 1);
+			vertices[0] = vec2(-20.0f, -20.0f); uvs[0] = vec2(0, 0);
+			vertices[1] = vec2(20.0f, -20.0f);  uvs[1] = vec2(1, 0);
+			vertices[2] = vec2(20.0f, 20.0f);   uvs[2] = vec2(1, 1);
+			vertices[3] = vec2(-20.0f, 20.0f);  uvs[3] = vec2(0, 1);
 		}
 		void Create() {
 			glGenVertexArrays(1, &vao);	// create 1 vertex array object
 			glBindVertexArray(vao);		// make it active
-
 			glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
-
 			// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
 			glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
 			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
@@ -1074,19 +1051,14 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 const float dt = 0.01f;
 float lastFrameTime = 0;
 bool hadWaited = false;
-#include <chrono>
-#include <thread>
-// Idle event indicating that some time elapsed: do animation here
+
 void onIdle() {
-	//long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
 	if (!hadWaited) {
-		//std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 		hadWaited = true;
 	}
 	static float tend = 0;
 	float tstart = tend;
 	tend = glutGet(GLUT_ELAPSED_TIME)/1000.0f;
-	printf("%f\n", tend);
 	int lefutott = 0;
 	float elteltido = 0;
 	for (float t = tstart; t < tend; t += dt) {
@@ -1094,9 +1066,6 @@ void onIdle() {
 		biker.animate(Dt);
 		lefutott++;
 		elteltido += Dt;
-	//if (biker.movemeghiv == 601) std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 	}
-	printf("lefutott: %d\n, eltelt ido: %f\n", lefutott, elteltido);
-	printf("move meghivodott: %d\n", biker.movemeghiv);
 	glutPostRedisplay();
 }
