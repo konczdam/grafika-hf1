@@ -148,6 +148,7 @@ enum  Orientation {
 	left = -1,
 	right = 1
 };
+const float PI = 3.1415926535897f;
 
 GPUProgram gpuProgram; // vertex and fragment shaders
 GPUProgram backGroundMaker;
@@ -178,15 +179,15 @@ Camera2D camera;		// 2D camera
 	 }
 
 	 void printvector(const std::vector<float>& asd) {
-		 for (int i = 0; i < asd.size()-4; i+=5)
+		 for (unsigned int i = 0; i < asd.size()-4; i+=5)
 			 std::cout << asd[i] << ',' << asd[i+1] << std::endl;
 		 std::cout << "vector ends here" << std::endl;
 	 }
 
 
 int compareVec4ByX(const void* v1, const void* v2){
-	int x1 = ((vec4*)v1)->x;
-	int x2 = ((vec4*)v2)->x;
+	float x1 = ((vec4*)v1)->x;
+	float x2 = ((vec4*)v2)->x;
 	if (x2 < x1)
 		return 1;
 	if (x2 == x1)
@@ -302,7 +303,7 @@ public:
 					leftside = &wCtrlPoints[i-2];
 					actual = &wCtrlPoints[i-1];
 					rightside = &wCtrlPoints[i];
-					toTheToRight = &wCtrlPoints[i + 1];
+					toTheToRight = &wCtrlPoints[i+1];
 					break;
 				}
 			}
@@ -312,7 +313,7 @@ public:
 				printf("gebasz");
 			}
 			//Choosing Tangent Vectors
-			for (int i = 0; i < wCtrlPoints.size(); i++) {
+			for (unsigned int i = 0; i < wCtrlPoints.size(); i++) {
 				if (wCtrlPoints[i].x == leftside->x &&wCtrlPoints[i + 3].x != toTheToRight->x) {
 					printf("leftside: %d", i);
 				if (wCtrlPoints[i + 3].x != toTheToRight->x)
@@ -320,7 +321,7 @@ public:
 
 				}
 			}
-			for (int i = 0; i < wCtrlPoints.size()-1; i++) {
+			for (unsigned int i = 0; i < wCtrlPoints.size()-1; i++) {
 				if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x) {
 					printf("gebasz detected!\n");
 					qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
@@ -351,6 +352,7 @@ public:
 			float yp1 = calculateY(x + 0.01f);
 			return -(yp1 - y) / (x - (x + 0.01f));
 		}
+		
 		float CalcDif2(float x) {
 			vec4* leftside = &wCtrlPoints[0];
 			vec4* actual = &wCtrlPoints[1];
@@ -490,9 +492,9 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		float timePassed = 0;
 
 		float CalculateRotation(vec2 asd) {
-			float circumference = 2 * radius * M_PI;
+			float circumference = 2 * radius * PI;
 			float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
-			return -2 * M_PI*motion / circumference;
+			return -2 * PI*motion / circumference;
 		}
 	public:
 		void setSpline(KochanekBartelsSpline* kb) {
@@ -596,16 +598,16 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 
 
 		radius = 0.8f;
-		drawingcentre = vec2(2.4, -2.4);
-		center = vec2(2.4, -2.4f-radius);
+		drawingcentre = vec2(2.4f, -2.4f);
+		center = vec2(2.4f, -2.4f-radius);
 		makeCircle();
 		makekullok();
 		makeBody();
 	}
 	void moveRight() {
-		float F = 12;
-		float m = 1;
-		float g = 9.8;
+		float F = 12.0f;
+		float m = 1.0f;
+		float g = 9.8f;
 		float derivative = orientation * kb->CalculateDeriative(center.x);
 		float alpha = atanf(derivative);
 		vec2 V = vec2(cosf(alpha), sinf(alpha));
@@ -619,9 +621,9 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 
 	void moveLeft() {
 		orientation = left;
-		float F = 12;
-		float m = 1;
-		float g = 9.8;
+		float F = 12.0f;
+		float m = 1.0f;
+		float g = 9.80f;
 		float derivative = orientation * kb->CalculateDeriative(center.x);
 		float alpha = atanf(derivative);
 		vec2 V = vec2(-cosf(alpha), sinf(alpha));
@@ -697,14 +699,14 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 	void makeCircle() {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindVertexArray(vao);
-		for (float i = 0.0f; i <= 2*M_PI; i += 2*M_PI / 100) {
+		for (float i = 0.0f; i <= 2*PI; i += 2*PI / 100) {
 			AddPointByCord(cos(i)*radius + drawingcentre.x, sin(i)*radius + drawingcentre.y);
 		}
 	}
 
 	void makekullok() {
 		glBindVertexArray(kullovao);
-		for (float i = 0.0f; i <= 2 * M_PI; i += 2 * M_PI / 6) {
+		for (float i = 0.0f; i <= 2 * PI; i += 2 * PI / 6) {
 			kullodata.push_back(cos(i+rotate)*radius + drawingcentre.x);
 			kullodata.push_back(sin(i+rotate)*radius + drawingcentre.y);
 			kullodata.push_back(0); // red
@@ -746,11 +748,11 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
  	}
 
 	void makeLeg(Orientation leg) {
-		float offset = M_PI / 2 * leg;
+		float offset = PI / 2 * leg;
 		float thigh = 1.6f;
 		float shin = 1.7f;
 		const vec2 P1 = vec2(drawingcentre.x, drawingcentre.y + 2.2f);
-		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75 + drawingcentre.x, sin(rotate + offset)*radius*0.75 + drawingcentre.y);
+		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
 		float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
 		float centerDx = P1.x - P2.x;
 		float centerDy = P1.y - P2.y;
@@ -833,19 +835,29 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 			glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
 			glLineWidth(2.0f);
 		}
-		//printf("%f\n", kb->CalculateDeriative(center.x) * orientation);
 	}
-
 	void animate(float et) {
 		timePassed += et;
 		if (timePassed > 0.01f) {
 			timePassed = 0;
-			if (isAtEdge())
+			if (isAtEdge() && !justChangedOrientation) {
 				changeOrientation();
+				justChangedOrientation = true;
+			}
 			Move();
+			
+
+			if (movesSinceLastChange > 50) {
+				justChangedOrientation = false;
+				movesSinceLastChange = 0;
+			}
+			if(justChangedOrientation)
+				movesSinceLastChange++;
 		}
 	}
 private:
+	bool justChangedOrientation = false;
+	unsigned short movesSinceLastChange = 0;
 	bool isAtEdge() {
 		return center.x < -10.0f || center.x > 10.0f;
 	}
@@ -959,6 +971,7 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 
 const float dt = 0.1f;
 float lastFrameTime = 0;
+
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
 	//long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
@@ -968,8 +981,6 @@ void onIdle() {
 	for (float t = tstart; t < tend; t += dt) {
 		float Dt = fmin(dt, tend - t);
 		biker.animate(Dt);
-		printf("%u\n", lastFrameTime);
-
 	}
 	glutPostRedisplay();
 }
