@@ -87,8 +87,8 @@ const char * fragmentSourceForBackground = R"(
 	    vec2 controlPoints[8]=vec2[8](
 		vec2(-0.1, 0.6),
 		vec2(0.2, 0.7),
-		vec2(0.4,0.6),
-		vec2(0.6,0.9),
+		vec2(0.4,0.45),
+		vec2(0.6,0.7),
 		vec2(0.8,0.65),
 		vec2(1,0.4),
 		vec2(1.2,0.6),
@@ -150,13 +150,13 @@ float plot (vec2 st, float pct){
 		}
 	}
 )";
-bool kovetes = false;
+bool FollowingBike = false;
 enum  Orientation {
 	left = -1,
 	right = 1
 };
 const float PI = 3.1415926535897f;
-
+const float appliedZoom = 0.7f;
 GPUProgram gpuProgram; // vertex and fragment shaders
 GPUProgram backGroundMaker;
 unsigned int vao;	   // virtual world on the GPU
@@ -181,20 +181,7 @@ public:
 
 Camera2D camera;		// 2D camera
 
-#include <iostream>
-	 void printvector(const std::vector<vec4>& asd) {
-		 for (auto temp : asd)
-			 std::cout << temp.x << ',' << temp.y << std::endl;
-	 }
-
-	 void printvector(const std::vector<float>& asd) {
-		 for (unsigned int i = 0; i < asd.size()-4; i+=5)
-			 std::cout << asd[i] << ',' << asd[i+1] << std::endl;
-		 std::cout << "vector ends here" << std::endl;
-	 }
-
-
-int compareVec4ByX(const void* v1, const void* v2){
+int compareVec4ByX(const void* v1, const void* v2) {
 	float x1 = ((vec4*)v1)->x;
 	float x2 = ((vec4*)v2)->x;
 	if (x2 < x1)
@@ -215,12 +202,11 @@ class KochanekBartelsSpline {
 			if (j != i) Li *= (t - ts[j]) / (ts[i] - ts[j]);
 		return Li;
 	}
+	std::vector<vec4> wCtrlPoints;		// coordinates of control points
 	float H0(float);
 	float H1(float);
 	float H2(float);
 	float H3(float);
-protected:
-	std::vector<vec4> wCtrlPoints;		// coordinates of control points
 public:
 	KochanekBartelsSpline(float t = 0.0f, float c = 0.0f, float b = 0.0f);
 
@@ -231,23 +217,21 @@ public:
 		AddControlPointByCord(15.0f, y);
 		AddControlPointByCord(17.0f, y);
 		AddControlPointByCord(19.0f, y);
-		
-	 }
+	}
 
-	 void AddControlPoint(float cX, float cY) {
+	void AddControlPoint(float cX, float cY) {
 		ts.push_back((float)wCtrlPoints.size());
 		vec4 wVertex = vec4(cX, cY, 0, 1) * camera.Pinv() * camera.Vinv();
 		wCtrlPoints.push_back(wVertex);
-		//qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
-		sortControlpoints();
+		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
 	}
 
-	 void AddControlPointByCord(float cX, float cY) {
-		 ts.push_back((float)wCtrlPoints.size());
-		 vec4 wVertex = vec4(cX, cY, 0, 1);
-		 wCtrlPoints.push_back(wVertex);
-		 sortControlpoints();
-	 }
+	void AddControlPointByCord(float cX, float cY) {
+		ts.push_back((float)wCtrlPoints.size());
+		vec4 wVertex = vec4(cX, cY, 0, 1);
+		wCtrlPoints.push_back(wVertex);
+		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
+	}
 
 
 	void Draw() {
@@ -262,20 +246,20 @@ public:
 			glBindBuffer(GL_ARRAY_BUFFER, vboCtrlPoints);
 			glBufferData(GL_ARRAY_BUFFER, wCtrlPoints.size() * 4 * sizeof(float), &wCtrlPoints[0], GL_DYNAMIC_DRAW);
 			if (colorLocation >= 0) glUniform3f(colorLocation, 1, 0, 0);
-				glPointSize(10.0f);
+			glPointSize(10.0f);
 			int location = glGetUniformLocation(gpuProgram.getId(), "color");
 			glUniform4f(location, 1.0f, 0.0f, 0.0f, 0.0f); // 3 floats*/
 			glDrawArrays(GL_POINTS, 0, wCtrlPoints.size());
 		}
-		
-		
+
+
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
-		glUniform4f(location, 33/256.0f, 161/256.0f, 30/256.0f, 1.0f); // 3 floats
-	
+		glUniform4f(location, 33 / 256.0f, 161 / 256.0f, 30 / 256.0f, 1.0f); // 3 floats
+
 		if (wCtrlPoints.size() >= 2) {	// draw curve
 			std::vector<float> vertexData;
 			for (int x = 0; x < 400; x++) {
-				float i = ((float)x / 20.0f) - 10.0f;
+				const float i = ((float)x / 20.0f) - 10.0f;
 				vec4 wVertex(i, calculateY(i), 0, 1);
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(wVertex.y);
@@ -293,187 +277,156 @@ public:
 		}
 
 	}
-		void sortControlpoints() {
-			for (int i = wCtrlPoints.size() - 1; i > 0; i--) {
-				for (int j = 0; j < i - 1; j++) {
-					if (wCtrlPoints[j].x > wCtrlPoints[j + 1].x) {
-						vec4 Temp = wCtrlPoints[j];
-						wCtrlPoints[j] = wCtrlPoints[j+1];
-						wCtrlPoints[j + 1] = Temp;
-					}
+	void sortControlpoints() {
+		for (int i = wCtrlPoints.size() - 1; i > 0; i--) {
+			for (int j = 0; j < i - 1; j++) {
+				if (wCtrlPoints[j].x > wCtrlPoints[j + 1].x) {
+					vec4 Temp = wCtrlPoints[j];
+					wCtrlPoints[j] = wCtrlPoints[j + 1];
+					wCtrlPoints[j + 1] = Temp;
 				}
 			}
+		}
 	}
-		float calculateY(float x) {
-			vec4* leftside = &wCtrlPoints[0];
-			vec4* actual = &wCtrlPoints[1];
-			vec4* rightside = nullptr;
-			vec4* toTheToRight = nullptr;
-			for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
-				if (wCtrlPoints[i].x > x ) {
-					leftside = &wCtrlPoints[i-2];
-					actual = &wCtrlPoints[i-1];
-					rightside = &wCtrlPoints[i];
-					toTheToRight = &wCtrlPoints[i+1];
-					break;
-				}
-				
+	float calculateY(const float x) {
+		vec4* leftside = &wCtrlPoints[0];
+		vec4* actual = &wCtrlPoints[1];
+		vec4* rightside = nullptr;
+		vec4* toTheToRight = nullptr;
+		for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
+			if (wCtrlPoints[i].x > x) {
+				leftside = &wCtrlPoints[i - 2];
+				actual = &wCtrlPoints[i - 1];
+				rightside = &wCtrlPoints[i];
+				toTheToRight = &wCtrlPoints[i + 1];
+				break;
 			}
 
-			if (rightside == nullptr) {
-				return -6.2f;
-				printf("gebasz");
-			}
-			//Choosing Tangent Vectors
-			for (unsigned int i = 0; i < wCtrlPoints.size(); i++) {
-				if (wCtrlPoints[i].x == leftside->x &&wCtrlPoints[i + 3].x != toTheToRight->x) {
-					printf("leftside: %d", i);
-				if (wCtrlPoints[i + 3].x != toTheToRight->x)
-					printf("totheright: %d, to the right is not  correct! \n", i+3);
-
-				}
-			}
-			for (unsigned int i = 0; i < wCtrlPoints.size()-1; i++) {
-				if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x) {
-					printf("gebasz detected!\n");
-					qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
-					sortControlpoints();
-					if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x)
-						printf("gebasz not fixed!!");
-				}
-			}
-
-			float deltaI = rightside->x - actual->x;
-			//incoming target vector
-			//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
-			float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
-
-			//outgoing target vec
-			float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
-
-			float res = 0;
-			res += H0((x - actual->x) / deltaI)  *  actual->y;
-			res += H1((x - actual->x) / deltaI)  *  rightside->y;
-			res += H2((x - actual->x) / deltaI)  * 1 * TiO;
-			res += H3((x - actual->x) / deltaI)  * 1 * TiI ;
-			return res;
-			
 		}
 
-		float calculateYnew(float x) {
-			vec4* leftside = nullptr;
-			vec4* actual = &wCtrlPoints[1];
-			vec4* rightside = nullptr;
-			vec4* toTheToRight = nullptr;
-			for (unsigned int i = 1; i < wCtrlPoints.size() - 1; i++) {
-				if (wCtrlPoints[i].x > x ) {
-					if(i!= 0)
-						leftside = &wCtrlPoints[i - 2];
-					actual = &wCtrlPoints[i-1];
-					rightside = &wCtrlPoints[i+0 ];
-					if(i != wCtrlPoints.size() - 1)
-						toTheToRight = &wCtrlPoints[i + 1];
-					break;
-				}
-			}
-
-			if (rightside == nullptr) {
-				return -6.2f;
-				printf("gebasz");
-			}
-			//Choosing Tangent Vectors
-		/*	for (unsigned int i = 0; i < wCtrlPoints.size(); i++) {
-				if (wCtrlPoints[i].x == leftside->x &&wCtrlPoints[i + 3].x != toTheToRight->x) {
-					printf("leftside: %d", i);
-					if (wCtrlPoints[i + 3].x != toTheToRight->x)
-						printf("totheright: %d, to the right is not  correct! \n", i + 3);
-
-				}
-			}
-			for (unsigned int i = 0; i < wCtrlPoints.size() - 1; i++) {
-				if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x) {
-					printf("gebasz detected!\n");
-					qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
-					sortControlpoints();
-					if (wCtrlPoints[i].x > wCtrlPoints[i + 1].x)
-						printf("gebasz not fixed!!");
-				}
-			}*/
-
-			float deltaI = rightside->x - actual->x;
-			//incoming target vector
-			//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
-			//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
-
-			//outgoing target vec
-			//float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
-
-			float res = 0;
-			res += H0((x - actual->x) / deltaI)  *  actual->y;
-			res += H1((x - actual->x) / deltaI)  *  rightside->y;
-			//res += H2((x - actual->x) / deltaI) * 1 * TiO;
-			//res += H3((x - actual->x) / deltaI) * 1 * TiI;
-
-			float v0;
-			v0 =leftside == nullptr  ? 1:  (actual->y - leftside->y) / (actual->x - leftside->x)*
-				(1 - tension)*(1 + continuity)*(1 + bias) / 2 +
-				(rightside->y - actual->y) / (rightside->x - actual->x)*
-				(1 - tension)*(1 - continuity)*(1 - bias) / 2;
-			
-			float v1;
-			v1 = toTheToRight == nullptr? 1 : (rightside->y - actual->y) / (rightside->x - actual->x)*
-				(1 - tension)*(1 - continuity)*(1 + bias) / 2 +
-				(toTheToRight->y - rightside->y) / (toTheToRight->x / rightside->x)*
-				(1 - tension)*(1 + continuity)*(1 + bias) / 2;
-
-
-			float Dt = rightside->x - actual->x;
-			float f0 = actual->y;
-			float f1 = rightside->y;
-			float T = x - actual->x;
-			float a = (v1 + v0) / Dt / Dt - (f1 - f0) * 2 / Dt / Dt / Dt;
-			float b = (f1 - f0) * 3 / Dt / Dt - (v1 + v0 * 2) / Dt;
-			float c = v0;
-			float d = f0;
-
-
-			return (a*T*T*T + b * T*T + c * T + d);
-
+		if (rightside == nullptr) {
+			return -6.2f;
 		}
-		float CalculateDeriative(float x) {
-			float y = calculateY(x);
-			float yp1 = calculateY(x + 0.01f);
-			return -(yp1 - y) / (x - (x + 0.01f));
-		}
-		
-		float CalcDif2(float x) {
-			vec4* leftside = &wCtrlPoints[0];
-			vec4* actual = &wCtrlPoints[1];
-			vec4* rightside = nullptr;
-			vec4* toTheToRight = nullptr;
-			for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
-				if (wCtrlPoints[i].x > x) {
+
+		float deltaI = rightside->x - actual->x;
+		//Choosing Tangent Vectors
+		//incoming target vector
+		//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+		float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
+
+		//outgoing target vec
+		float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+
+		float res = 0;
+		res += H0((x - actual->x) / deltaI)  *  actual->y;
+		res += H1((x - actual->x) / deltaI)  *  rightside->y;
+		res += H2((x - actual->x) / deltaI)  *  TiO;
+		res += H3((x - actual->x) / deltaI)  *  TiI;
+		return res;
+
+	}
+	float calculateYnew(float x) {
+		vec4* leftside = nullptr;
+		vec4* actual = &wCtrlPoints[1];
+		vec4* rightside = nullptr;
+		vec4* toTheToRight = nullptr;
+		for (unsigned int i = 1; i < wCtrlPoints.size() - 1; i++) {
+			if (wCtrlPoints[i].x > x) {
+				if (i > 1)
 					leftside = &wCtrlPoints[i - 2];
-					actual = &wCtrlPoints[i - 1];
-					rightside = &wCtrlPoints[i];
+				actual = &wCtrlPoints[i - 1];
+				rightside = &wCtrlPoints[i + 0];
+				if (i != wCtrlPoints.size() - 1)
 					toTheToRight = &wCtrlPoints[i + 1];
-					break;
-				}
+				break;
 			}
-			float deltaI = rightside->x - actual->x;
-			float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
-			float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
-			float res = 0;
-			float s = ((x - actual->x) / deltaI);
-			res += (6 * s*s - 6 * s) * (x / deltaI) * actual->y;
-			res +=(-6 * s*s + 6 * s) * (x / deltaI) *  rightside->y;
-			res += (3 * s*s - 4 * s + 1) * (x / deltaI) *deltaI* TiO;
-			res += (3 * s*s - 2 * s) * (x / deltaI) *deltaI* TiI;
-			return res;
 		}
+
+		if (rightside == nullptr) {
+
+			return -6.2f;
+		}
+
+		float deltaI = rightside->x - actual->x;
+		//incoming target vector
+		//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+		float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
+
+		//outgoing target vec
+		float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+
+		float res = 0;
+		//res += H0((x - actual->x) / deltaI)  *  actual->y;
+		//res += H1((x - actual->x) / deltaI)  *  rightside->y;
+		//res += H2((x - actual->x) / deltaI) * 1 * TiO;
+		//res += H3((x - actual->x) / deltaI) * 1 * TiI;
+
+		float v0;
+		v0 = leftside == nullptr ? 1 : (actual->y - leftside->y) / (actual->x - leftside->x)*
+			(1 - tension)*(1 + continuity)*(1 + bias) / 2 +
+			(rightside->y - actual->y) / (rightside->x - actual->x)*
+			(1 - tension)*(1 - continuity)*(1 - bias) / 2;
+		float v1;
+		v1 = toTheToRight == nullptr ? 1 : (rightside->y - actual->y) / (rightside->x - actual->x)*
+			(1 - tension)*(1 - continuity)*(1 + bias) / 2 +
+			(toTheToRight->y - rightside->y) / (toTheToRight->x / rightside->x)*
+			(1 - tension)*(1 + continuity)*(1 + bias) / 2;
+		
+		//v0 = TiO;
+		//v1 = TiI;
+		float Dt = rightside->x - actual->x;
+		float f0 = actual->y;
+		float f1 = rightside->y;
+		float T = (x - actual->x)/Dt;
+		float a = (v1 + v0) / Dt / Dt - (f0 - f1) * 2 / Dt / Dt / Dt;
+		float b = (f1 - f0) * 3 / Dt / Dt - (v1 + v0 * 2) / Dt;
+		float c = v0;
+		float d = f0;
+
+		return (a*T*T*T + b * T*T + c * T + d);
+	}
+
+
+	float CalculateDeriative(float x) {
+		float y = calculateY(x);
+		float yp1 = calculateY(x + 0.01f);
+		return -(yp1 - y) / (x - (x + 0.01f));
+	}
+
+	float CalcDif2(float x) {
+		vec4* leftside = &wCtrlPoints[0];
+		vec4* actual = &wCtrlPoints[1];
+		vec4* rightside = nullptr;
+		vec4* toTheToRight = nullptr;
+		for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
+			if (wCtrlPoints[i].x > x) {
+				leftside = &wCtrlPoints[i - 2];
+				actual = &wCtrlPoints[i - 1];
+				rightside = &wCtrlPoints[i];
+				toTheToRight = &wCtrlPoints[i + 1];
+				break;
+			}
+		}
+		float deltaI = rightside->x - actual->x;
+		float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(toTheToRight->y - rightside->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(rightside->y - actual->y);
+		float TiO = ((1 - tension)*(1 - continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 + continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
+		float res = 0;
+		float s = ((x - actual->x) / deltaI);
+		/*res += (6 * s*s - 6 * s) * (x / deltaI) * actual->y;
+		res += (-6 * s*s + 6 * s) * (x / deltaI) *  rightside->y;
+		res += (3 * s*s - 4 * s + 1) * (x / deltaI) *deltaI* TiO;
+		res += (3 * s*s - 2 * s) * (x / deltaI) *deltaI* TiI;*/
+		const float param = (x - actual->x) / deltaI;
+		const float tti = x / deltaI;
+		res += (6 * param*param - 6 * param)* tti*actual->y;
+		res += (-6 * param*param + 6 * param) *tti* rightside->y;
+		res += (3 * param*param - 4 * param + 1)* TiO * x;
+		res += (3 * param*param - 2 * param)*TiI* x;
+		return res;
+	}
 };
-KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
-	tension(t), continuity(c), bias(b){
+KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b) :
+	tension(t), continuity(c), bias(b) {
 	glGenVertexArrays(1, &vaoCurve);
 	glBindVertexArray(vaoCurve);
 
@@ -499,16 +452,16 @@ KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b):
 }
 
 float KochanekBartelsSpline::H0(float s) {
-		return 2*s*s*s - 3*s*s + 1;
-		}
+	return 2 * s*s*s - 3 * s*s + 1;
+}
 float KochanekBartelsSpline::H1(float s) {
-	return -2 * s*s*s + 3 * s*s ;
+	return -2 * s*s*s + 3 * s*s;
 }
 float KochanekBartelsSpline::H2(float s) {
-	return  s*s*s - 2 * s*s + s;
+	return  s * s*s - 2 * s*s + s;
 }
 float KochanekBartelsSpline::H3(float s) {
-	return s*s*s - s*s;
+	return s * s*s - s * s;
 }
 
 KochanekBartelsSpline* kb;
@@ -517,76 +470,76 @@ KochanekBartelsSpline* kb;
 
 
 void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
-		tarolo.push_back(x);
-		tarolo.push_back(y);
-		tarolo.push_back(rgb.x);
-tarolo.push_back(rgb.y);
-tarolo.push_back(rgb.z);
-glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
+	tarolo.push_back(x);
+	tarolo.push_back(y);
+	tarolo.push_back(rgb.x);
+	tarolo.push_back(rgb.y);
+	tarolo.push_back(rgb.z);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
 
+}
+
+class Biker {
+	GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
+	std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
+	vec2			    wTranslate;
+	vec2 shoulderCenter;
+	vec2 center, drawingcentre;
+	float radius;
+	vec4 offset = vec4(0, 0, 0, 0);
+	float rotate = 0;
+	Orientation orientation = right;
+	KochanekBartelsSpline* kb;
+	float timePassedSinceStart = 0;
+
+	float CalculateRotation(vec2 asd) {
+		float circumference = 2 * radius * PI;
+		float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
+		return -2 * PI*motion / circumference;
 	}
+public:
+	void setSpline(KochanekBartelsSpline* kb) {
+		this->kb = kb;
+	}
+	void moveCenterByVec(vec2 asd) {
+		/*
+		orientation = asd.x > 0 ? right : left;
+		center = center + asd;
+		center.y = kb->calculateY(center.x)+0.69f;
+		rotate += orientation*CalculateRotation(asd);*/
 
-	class Biker {
-		GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
-		std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
-		vec2			    wTranslate;
-		vec2 shoulderCenter;
-		vec2 center, drawingcentre;
-		float radius;
-		vec4 offset = vec4(0, 0, 0, 0);
-		float rotate = 0;
-		Orientation orientation = right;
-		KochanekBartelsSpline* kb;
-		float timePassedSinceStart = 0;
+		fixOrientation(asd);
+		fixCentreY();
+		int ori = orientation;
+		center = center + asd;
+		float derivative = orientation * kb->CalculateDeriative(center.x);
+		//printf("deriative: %f\n", derivative);
+		float alpha = atanf(derivative);
+		vec2 N = vec2(-sinf(alpha), cosf(alpha));
+		float denim = sqrtf(N.x*N.x + N.y * N.y);
 
-		float CalculateRotation(vec2 asd) {
-			float circumference = 2 * radius * PI;
-			float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
-			return -2 * PI*motion / circumference;
+		//N.x = N.x / denim;
+		//N.y = N.y / denim;
+		N = N * (1 / denim);
+		if (N.y < 0 && (center + (N * radius)).y < kb->calculateY((center + (N * radius)).x)) {
+			N = N * (-1);
 		}
-	public:
-		void setSpline(KochanekBartelsSpline* kb) {
-			this->kb = kb;
+		if (orientation != right && N.x < 0) {
+			N.x = N.x * (-1);
 		}
-		void moveCenterByVec(vec2 asd) {
-			/*
-			orientation = asd.x > 0 ? right : left;
-			center = center + asd;
-			center.y = kb->calculateY(center.x)+0.69f;
-			rotate += orientation*CalculateRotation(asd);*/
-
-			fixOrientation(asd);
-			fixCentreY();
-			int ori = orientation;
-			center = center + asd;
-			float derivative = orientation * kb->CalculateDeriative(center.x);
-			//printf("deriative: %f\n", derivative);
-			float alpha = atanf(derivative);
-			vec2 N = vec2(-sinf(alpha), cosf(alpha));
-			float denim = sqrtf(N.x*N.x + N.y * N.y);
-
-			//N.x = N.x / denim;
-			//N.y = N.y / denim;
-			N = N * (1 / denim);
-			if (N.y < 0 && (center + (N * radius)).y < kb->calculateY((center + (N * radius)).x)) {
-				N = N * (-1);
-			}
-			if (orientation != right && N.x < 0) {
-				N.x = N.x * (-1);
-			}
-			if ((orientation == left && derivative < 0 && N.x > 0)){
-				N.x = N.x * (-1);
-			}
+		if ((orientation == left && derivative < 0 && N.x > 0)) {
+			N.x = N.x * (-1);
+		}
 
 		drawingcentre = center + (N * radius);
-		
+
 		//center.y = kb->calculateY(center.x) + 0.69f;
 		//wTranslate = wTranslate + asd;
 		rotate += orientation * CalculateRotation(asd);
 	}
 
-	
+
 
 	void Create() {
 
@@ -642,21 +595,21 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 
 		radius = 0.8f;
 		drawingcentre = vec2(2.4f, -2.4f);
-		center = vec2(2.4f, -2.4f-radius);
+		center = vec2(2.4f, -2.4f - radius);
 		makeCircle();
 		makekullok();
 		makeBody();
 	}
-		const float F = 18.0f;
-		const float m = 1.0f;
-		const float g = 9.8f;
-		const float rho = 0.8f;
+	const float F = 18.0f;
+	const float m = 1.0f;
+	const float g = 9.8f;
+	const float rho = 0.8f;
 	void moveRight() {
 		float derivative = orientation * kb->CalculateDeriative(center.x);
 		float alpha = atanf(derivative);
 		vec2 V = vec2(cosf(alpha), sinf(alpha));
 		float denim = sqrtf(V.x*V.x + V.y * V.y);
-		V = V * (1 / (300*denim));
+		V = V * (1 / (300 * denim));
 		float v = (F - m * g*sin(alpha)) / rho;
 		moveCenterByVec(V*v);
 	}
@@ -679,17 +632,12 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		vec2 N = vec2(-sinf(alpha), cosf(alpha));
 		float denim = sqrtf(N.x*N.x + N.y * N.y);
 
-		//N.x = N.x / denim;
-		//N.y = N.y / denim;
 		N = N * (1 / denim);
 		if (N.y < 0) {
 			N = N * (-1);
 		}
 
 		drawingcentre = center + (N * radius);
-
-		//center.y = kb->calculateY(center.x) + 0.69f;
-		//wTranslate = wTranslate + asd;
 	}
 
 	void fixOrientation(vec2 asd) {
@@ -712,9 +660,9 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 	}
 	mat4 Mkullok() {
 		return mat4(1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, 1, 0,
-					0, 0, 0, 1); // translation
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1); // translation
 	}
 
 
@@ -732,7 +680,7 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 	void makeCircle() {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindVertexArray(vao);
-		for (float i = 0.0f; i <= 2*PI; i += 2*PI / 100) {
+		for (float i = 0.0f; i <= 2 * PI; i += 2 * PI / 100) {
 			AddPointByCord(cos(i)*radius + drawingcentre.x, sin(i)*radius + drawingcentre.y);
 		}
 	}
@@ -751,16 +699,31 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		makeSeat();
 		glLineWidth(1.5f);
 		makeUpperBody();
- 	}
+		makeArms();
+		makeHead();
+	}
+
+	void makeHead() {
+
+		vec2 headcentre = vec2(shoulderCenter.x, shoulderCenter.y + 0.4f);
+		for (float i = -PI/2; i <= 1.5*PI + 0.001f; i += PI / 14.0f) {
+			addPointToBuffer(headcentre.x + 0.4f* cosf(i), headcentre.y + 0.4f*sinf(i), bodydata, vec3(0, 0, 0), vbobody);
+		}
+	}
+	void makeArms() {
+		addPointToBuffer(shoulderCenter.x+1.2f, shoulderCenter.y - 2.0f, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(shoulderCenter.x, shoulderCenter.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(shoulderCenter.x - 1.2f, shoulderCenter.y - 2.0f, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(shoulderCenter.x, shoulderCenter.y, bodydata, vec3(0, 0, 0), vbobody);
+	}
 
 	void makeUpperBody() {
-		shoulderCenter.x = drawingcentre.x + 0.9f * (cosf(timePassedSinceStart))/3;
+		shoulderCenter.x = drawingcentre.x + 0.9f * (cosf(timePassedSinceStart)) / 3;
 		const float c = 2.18f;
 		const float b = fabsf(drawingcentre.x - shoulderCenter.x);
 		const float a = sqrtf(powf(c, 2) - powf(b, 2));
-		printf("a: %f\n", a);
 		shoulderCenter.y = drawingcentre.y + 2.18f + a;// *(PI / 4.0f + (cos(timePassedSinceStart)) / 20);
-		addPointToBuffer(shoulderCenter.x, shoulderCenter.y , bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(shoulderCenter.x, shoulderCenter.y, bodydata, vec3(0, 0, 0), vbobody);
 	}
 
 	void makeSeat() {
@@ -769,12 +732,15 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		addPointToBuffer(drawingcentre.x, drawingcentre.y + 2.18f, bodydata, vec3(0, 0, 0), vbobody);
 	}
 
-		const float thighBoneLength = 1.6f;
-		const float shinBoneLength = 1.7f;
+	const float thighBoneLength = 1.6f;
+	const float shinBoneLength = 1.7f;
+	
 	void makeLeg(const Orientation leg) {
+		//based on: https://gist.github.com/jupdike/bfe5eb23d1c395d8a0a1a4ddd94882ac
+
 		const float offset = PI / 2 * leg;
 		const vec2 P1 = vec2(drawingcentre.x, drawingcentre.y + 2.2f);
-		const vec2 P2 = vec2(cos(rotate+ offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
+		const vec2 P2 = vec2(cos(rotate + offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
 		const float R = sqrtf(powf(P2.x - P1.x, 2) + powf(P2.y - P1.y, 2));
 		const float centerDx = P1.x - P2.x;
 		const float centerDy = P1.y - P2.y;
@@ -795,88 +761,79 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		const float iy1 = fy + gy;
 		const float iy2 = fy - gy;
 
-		vec2 asd = orientation == right ?  vec2(ix2, iy2) :  vec2(ix1, iy1);
+		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy1);
 
-		addPointToBuffer(P1.x, P1.y, bodydata,  vec3(0, 0, 0), vbobody);
-		addPointToBuffer(asd.x, asd.y, bodydata,   vec3(0, 0, 0), vbobody);
-		addPointToBuffer(P2.x, P2.y, bodydata,   vec3(0, 0, 0), vbobody);
-		addPointToBuffer(asd.x, asd.y, bodydata,  vec3(0, 0, 0), vbobody);
-		addPointToBuffer(P1.x, P1.y, bodydata,   vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0, 0, 0), vbobody);
+		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0, 0, 0), vbobody);
 	}
 
 	void Draw() {
-			glLineWidth(3.0f);
+		glLineWidth(3.0f);
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		clearPreviousData();
 		glUniform4f(location, 0.0f, 0.0f, 0.0f, 1.0f);
-		if (vertexData.size() > 0) {
-			vertexData.clear();
-			makeCircle();
-			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
-			MVPTransform.SetUniform(gpuProgram.getId(),  "MVP");
-			glBindVertexArray(vao);
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glDrawArrays(GL_LINE_LOOP, 0,vertexData.size() / 5);
-		}
+		makeCircle();
 
-		if (kullodata.size() > 0) {
-			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			kullodata.clear();
-			makekullok();
-			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
-			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
-			glBindVertexArray(kullovao);
-			glBindBuffer(GL_ARRAY_BUFFER,kullovbo);
-			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
-			glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
-		}
+		mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
+		MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glDrawArrays(GL_LINE_LOOP, 0, vertexData.size() / 5);
 
-		if (bodydata.size() > 0) {
-			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			bodydata.clear();
-			makeBody();
-			mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
-			MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
-			glBindVertexArray(vaobody);
-			glBindBuffer(GL_ARRAY_BUFFER, vbobody);
-			glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
-		}
-			glLineWidth(2.0f);
+
+		makekullok();
+		MVPTransform = Mkullok() * camera.V() * camera.P();
+		MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
+		glBindVertexArray(kullovao);
+		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
+		glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_LINE_STRIP, 0, kullodata.size() / 5);
+
+
+		makeBody();
+		MVPTransform = Mkullok() * camera.V() * camera.P();
+		MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
+		glBindVertexArray(vaobody);
+		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
+		glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
+		glLineWidth(2.0f);
 	}
 
 	vec2 getCentre() {
 		return center;
 	}
-	void AddTranslation(vec2 wT) { wTranslate = wTranslate + wT; }
-	int movemeghiv = 0;
 	float timePassedSinceLastFrame = 0;
 	void animate(float et) {
 		timePassedSinceStart += et;
 		timePassedSinceLastFrame += et;
-		if (timePassedSinceLastFrame > 0.02f) {
+		if (timePassedSinceLastFrame > 0.02f) {  // 50 FPS max
 			timePassedSinceLastFrame = 0;
 			if (isAtEdge() && !justChangedOrientation) {
 				changeOrientation();
 				justChangedOrientation = true;
 			}
 			Move();
-			movemeghiv++;
 			if (movesSinceLastChange > 50) {
 				justChangedOrientation = false;
 				movesSinceLastChange = 0;
 			}
-			if(justChangedOrientation)
+			if (justChangedOrientation)
 				movesSinceLastChange++;
 		}
 	}
 private:
 	void clearPreviousData() {
-
+		vertexData.clear();
+		kullodata.clear();
+		bodydata.clear();
 	}
 
 	bool justChangedOrientation = false;
 	unsigned short movesSinceLastChange = 0;
+	
 	bool isAtEdge() {
 		return center.x < -10.0f || center.x > 10.0f;
 	}
@@ -892,51 +849,51 @@ private:
 
 Biker biker;
 
-	class TexturedQuad {
-		unsigned int vao, vbo[2];
-		vec2 vertices[4], uvs[4];
-	public:
-		TexturedQuad() {
-			vertices[0] = vec2(-20.0f, -20.0f); uvs[0] = vec2(0, 0);
-			vertices[1] = vec2(20.0f, -20.0f);  uvs[1] = vec2(1, 0);
-			vertices[2] = vec2(20.0f, 20.0f);   uvs[2] = vec2(1, 1);
-			vertices[3] = vec2(-20.0f, 20.0f);  uvs[3] = vec2(0, 1);
-		}
-		void Create() {
-			glGenVertexArrays(1, &vao);	// create 1 vertex array object
-			glBindVertexArray(vao);		// make it active
-			glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
-			// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
-			glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
-			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
-			// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+class TexturedQuad {
+	unsigned int vao, vbo[2];
+	vec2 vertices[4], uvs[4];
+public:
+	TexturedQuad() {
+		vertices[0] = vec2(-20.0f, -20.0f); uvs[0] = vec2(0, 0);
+		vertices[1] = vec2(20.0f, -20.0f);  uvs[1] = vec2(1, 0);
+		vertices[2] = vec2(20.0f, 20.0f);   uvs[2] = vec2(1, 1);
+		vertices[3] = vec2(-20.0f, 20.0f);  uvs[3] = vec2(0, 1);
+	}
+	void Create() {
+		glGenVertexArrays(1, &vao);	// create 1 vertex array object
+		glBindVertexArray(vao);		// make it active
+		glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
+		// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
+		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
 
-			glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
-			glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	   // copy to that part of the memory which is not modified 
-			// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
-		}
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
+		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	   // copy to that part of the memory which is not modified 
+		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+	}
 
-		mat4 Mbicikliseltolas() {
-			return mat4(1, 0, 0, 0,
-				0, 1, 0, 0,
-				0, 0, 1, 0,
-				biker.getCentre().x/10, biker.getCentre().y/10, 0, 1); // translation
-		}
-		void Draw() {
-			glBindVertexArray(vao);	// make the vao and its vbos active playing the role of the data source
+	mat4 BikeFollowingMatrice() {
+		return mat4(1*appliedZoom,				 0,							0, 0,
+					0,							 1*appliedZoom,				0, 0,
+					0,					         0,							1, 0,
+					biker.getCentre().x / 10,    biker.getCentre().y / 10,  0, 1); // translation
+	}
+	void Draw() {
+		glBindVertexArray(vao);	// make the vao and its vbos active playing the role of the data source
 
-			mat4 MVPTransform = camera.V() * camera.P();
-			if (kovetes)
-				MVPTransform = MVPTransform * Mbicikliseltolas();
-			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-			MVPTransform.SetUniform(backGroundMaker.getId(), "MVP");
-			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	// draw two triangles forming a quad
-		}
-	};
+		mat4 MVPTransform = camera.V() * camera.P();
+		if (FollowingBike)
+			MVPTransform = MVPTransform * BikeFollowingMatrice();
+		// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
+		MVPTransform.SetUniform(backGroundMaker.getId(), "MVP");
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	// draw two triangles forming a quad
+	}
+};
 
 TexturedQuad quad;
 
@@ -958,7 +915,7 @@ void onInitialization() {
 	glGenBuffers(1, &vbo);	// Generate 1 buffer
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	// Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
-	
+
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 	glEnableVertexAttribArray(0);  // AttribArray 0
@@ -975,30 +932,30 @@ void onInitialization() {
 
 // Window has become invalid: Redraw
 void onDisplay() {
-	glClearColor(159/256.0f, 207/256.0f, 230/256.0f, 0.98f);     // background color
+	glClearColor(159 / 256.0f, 207 / 256.0f, 230 / 256.0f, 0.98f);     // background color
 	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
 
 	// Set color to (0, 1, 0) = green
 	int location = glGetUniformLocation(gpuProgram.getId(), "color");
-	glUniform4f(location, 1.0f, 1.0f, 0.0f,1.0f); // 3 floats
+	glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f); // 3 floats
 
 	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
-		                      0, 1, 0, 0,    // row-major!
-		                      0, 0, 1, 0,
-		                      0, 0, 0, 1 };
+							  0, 1, 0, 0,    // row-major!
+							  0, 0, 1, 0,
+							  0, 0, 0, 1 };
 
 	location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
 	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
 
 	location = glGetUniformLocation(backGroundMaker.getId(), "MVP");	// Get the GPU location of uniform variable MVP
 	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
-	
+
 	glBindVertexArray(vao);  // Draw call
 	//glDrawArrays(GL_TRIANGLES, 0 /*startIdx*/, 3 /*# Elements*/);
-	if (kovetes)
+	if (FollowingBike)
 		camera.setCentre(biker.getCentre());
-	
-	
+
+
 	backGroundMaker.Use();
 	quad.Draw();
 	gpuProgram.Use();
@@ -1011,21 +968,29 @@ const unsigned char spaceBar = 32;
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
-		
 		biker.moveRight();
+		glutPostRedisplay();
+	}
+	if (key == 'w') {
+		biker.animate(0.01f);
 		glutPostRedisplay();
 	}
 	if (key == 'a') {
 		biker.moveLeft();
 		glutPostRedisplay();
 	}
-
 	if (key == spaceBar) {
-		kovetes = !kovetes; {
-			if (!kovetes)
-				camera.setCentre(vec2(0.0f, 0.0f));
+		if (!FollowingBike) {
+			camera.Zoom(appliedZoom);
 		}
-		
+		FollowingBike = !FollowingBike; {
+			if (!FollowingBike) {
+				camera.setCentre(vec2(0.0f, 0.0f));
+				camera.Zoom(1/appliedZoom);
+
+			}
+		}
+
 	}
 }
 
@@ -1035,8 +1000,8 @@ void onKeyboardUp(unsigned char key, int pX, int pY) {
 
 // Move mouse with key pressed
 void onMouseMotion(int pX, int pY) {	// pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-	
-	
+
+
 }
 
 // Mouse click event
@@ -1058,7 +1023,7 @@ void onIdle() {
 	}
 	static float tend = 0;
 	float tstart = tend;
-	tend = glutGet(GLUT_ELAPSED_TIME)/1000.0f;
+	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 	int lefutott = 0;
 	float elteltido = 0;
 	for (float t = tstart; t < tend; t += dt) {
