@@ -487,6 +487,8 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		float rotate = 0;
 		Orientation orientation = right;
 		KochanekBartelsSpline* kb;
+		float timePassed = 0;
+
 		float CalculateRotation(vec2 asd) {
 			float circumference = 2 * radius * M_PI;
 			float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
@@ -833,6 +835,28 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		}
 		//printf("%f\n", kb->CalculateDeriative(center.x) * orientation);
 	}
+
+	void animate(float et) {
+		timePassed += et;
+		if (timePassed > 0.01f) {
+			timePassed = 0;
+			if (isAtEdge())
+				changeOrientation();
+			Move();
+		}
+	}
+private:
+	bool isAtEdge() {
+		return center.x < -10.0f || center.x > 10.0f;
+	}
+
+	void changeOrientation() {
+		orientation = orientation == right ? left : right;
+	}
+	void Move() {
+		orientation == right ? moveRight() : moveLeft();
+	}
+
 };
 
 
@@ -933,17 +957,19 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	}
 }
 
-const float dt = 0.01f;
-#include <chrono>
-#include <thread>
+const float dt = 0.1f;
+float lastFrameTime = 0;
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
 	//long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
 	static float tend = 0;
 	float tstart = tend;
-	float lastFrameTime = tstart;
-	//std::this_thread::sleep_for(std::chrono::milliseconds(600));
-	tend = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	tend = glutGet(GLUT_ELAPSED_TIME)/1000.0f;
 	for (float t = tstart; t < tend; t += dt) {
+		float Dt = fmin(dt, tend - t);
+		biker.animate(Dt);
+		printf("%u\n", lastFrameTime);
+
 	}
+	glutPostRedisplay();
 }
