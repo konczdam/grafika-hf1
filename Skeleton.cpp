@@ -98,6 +98,8 @@ const char * fragmentSourceForBackground = R"(
 
 	in vec2 texCoord;			// variable input: interpolated texture coordinates
 	out vec4 outColor;		// output that goes to the raster memory as told by glBindFragDataLocation
+	uniform vec4 skyTop = vec4(158.0f/255.0f, 236.0f/255.0f, 1.0f, 1.0f);
+	uniform vec4 skyBottom = vec4(45.0f/255.0f,212.0f/255.0f, 1.0f, 1.0f); 
 
 float H0(float s) {
 		return 2*s*s*s - 3*s*s + 1;
@@ -111,7 +113,7 @@ float H2(float s) {
 float H3(float s) {
 	return s*s*s - s*s;
 }
-	bool isHill(vec2 Coord){
+bool isHill(vec2 Coord){
 		float y = 0;
 		for(int i = 1; i < 7; i++){
 			if(controlPoints[i].x > Coord.x){
@@ -137,9 +139,10 @@ float H3(float s) {
 
 	void main() {
 		if (isHill(texCoord)) {
-			outColor = vec4(112/255.0f, 88/255.0f, 63/255.0f, 1); 
+			outColor = vec4(131/255.0f, 204/255.0f, 211/255.0f, 1); 
 		} else {
-			outColor = vec4(159/255.0f, 207/255.0f, 230/255.0f, 0.98f);
+			//outColor = vec4(159/255.0f, 207/255.0f, 230/255.0f, 0.98f);
+			outColor = ((600-texCoord.y)/600)*skyTop + ((texCoord.y)/600)*skyBottom;
 		}
 	}
 )";
@@ -257,12 +260,13 @@ public:
 			glUniform4f(location, 1.0f, 0.0f, 0.0f, 0.0f); // 3 floats*/
 			glDrawArrays(GL_POINTS, 0, wCtrlPoints.size());
 		}
+		
+		
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		glUniform4f(location, 33/256.0f, 161/256.0f, 30/256.0f, 1.0f); // 3 floats
+	
 		if (wCtrlPoints.size() >= 2) {	// draw curve
 			std::vector<float> vertexData;
-
-
 			for (int x = 0; x < 400; x++) {
 				float i = ((float)x / 20.0f) - 10.0f;
 				vec4 wVertex(i, calculateY(i), 0, 1);
@@ -508,7 +512,6 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 			rotate += orientation*CalculateRotation(asd);*/
 
 			fixOrientation(asd);
-			printf("center: %f, %f\n", center.x, center.y);
 			fixCentreY();
 			int ori = orientation;
 			center = center + asd;
@@ -518,22 +521,17 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 			vec2 N = vec2(-sinf(alpha), cosf(alpha));
 			float denim = sqrtf(N.x*N.x + N.y * N.y);
 
-			printf("denim: %f\n", denim);
 			//N.x = N.x / denim;
 			//N.y = N.y / denim;
 			N = N * (1 / denim);
-			printf("alpha:%f, N: %f, %f\n", alpha, N.x, N.y);
 			if (N.y < 0 && (center + (N * radius)).y < kb->calculateY((center + (N * radius)).x)) {
 				N = N * (-1);
-				printf("egyik\n");
 			}
 			if (orientation != right && N.x < 0) {
 				N.x = N.x * (-1);
-				printf("masik\n");
 			}
 			if ((orientation == left && derivative < 0 && N.x > 0)){
 				N.x = N.x * (-1);
-				printf("harmadik\n");
 			}
 
 		drawingcentre = center + (N * radius);
@@ -615,7 +613,6 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		V = V * (1 / (300*denim));
 		float rho = 0.5f;
 		float v = (F - m * g*sin(alpha)) / rho;
-		printf("v*V:%f, %f\n", (V*v).x, (V*v).y);
 		moveCenterByVec(V*v);
 	}
 
@@ -631,23 +628,19 @@ glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNA
 		V = V * (1 / (300 * denim));
 		float rho = 0.5f;
 		float v = (F - m * g*sin(alpha)) / rho;
-		printf("v*V:%f, %f\n", (V*v).x, (V*v).y);
 		moveCenterByVec(V*v);
 	}
 
 	void fixCentreY() {
 		center.y = kb->calculateY(center.x);
 		float derivative = orientation * kb->CalculateDeriative(center.x);
-		printf("deriative: %f\n", derivative);
 		float alpha = atanf(derivative);
 		vec2 N = vec2(-sinf(alpha), cosf(alpha));
 		float denim = sqrtf(N.x*N.x + N.y * N.y);
 
-		printf("denim: %f\n", denim);
 		//N.x = N.x / denim;
 		//N.y = N.y / denim;
 		N = N * (1 / denim);
-		printf("alpha:%f, N: %f, %f\n", alpha, N.x, N.y);
 		if (N.y < 0) {
 			N = N * (-1);
 		}
