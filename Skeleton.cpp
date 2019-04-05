@@ -425,103 +425,117 @@ void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GL
 		tarolo.push_back(x);
 		tarolo.push_back(y);
 		tarolo.push_back(rgb.x);
-		tarolo.push_back(rgb.y);
-		tarolo.push_back(rgb.z);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
+tarolo.push_back(rgb.y);
+tarolo.push_back(rgb.z);
+glBindBuffer(GL_ARRAY_BUFFER, vbo);
+glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
 
 	}
-class TexturedQuad {
-	unsigned int vao, vbo[2];
-	vec2 vertices[4], uvs[4];
-public:
-	TexturedQuad() {
-		vertices[0] = vec2(-10, -10); uvs[0] = vec2(0, 0);
-		vertices[1] = vec2(10, -10);  uvs[1] = vec2(1, 0);
-		vertices[2] = vec2(10, 10);   uvs[2] = vec2(1, 1);
-		vertices[3] = vec2(-10, 10);  uvs[3] = vec2(0, 1);
-	}
-	void Create() {
-		glGenVertexArrays(1, &vao);	// create 1 vertex array object
-		glBindVertexArray(vao);		// make it active
+	class TexturedQuad {
+		unsigned int vao, vbo[2];
+		vec2 vertices[4], uvs[4];
+	public:
+		TexturedQuad() {
+			vertices[0] = vec2(-10, -10); uvs[0] = vec2(0, 0);
+			vertices[1] = vec2(10, -10);  uvs[1] = vec2(1, 0);
+			vertices[2] = vec2(10, 10);   uvs[2] = vec2(1, 1);
+			vertices[3] = vec2(-10, 10);  uvs[3] = vec2(0, 1);
+		}
+		void Create() {
+			glGenVertexArrays(1, &vao);	// create 1 vertex array object
+			glBindVertexArray(vao);		// make it active
 
-		glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
+			glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
 
-		// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
-		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+			// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
+			glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
+			// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
 
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
-		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	   // copy to that part of the memory which is not modified 
-		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
-	}
-
-	
-	void Draw() {
-		glBindVertexArray(vao);	// make the vao and its vbos active playing the role of the data source
-
-		mat4 MVPTransform = camera.V() * camera.P();
-
-		// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
-		MVPTransform.SetUniform(backGroundMaker.getId(), "MVP");
+			glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
+			glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	   // copy to that part of the memory which is not modified 
+			// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+		}
 
 
-		
+		void Draw() {
+			glBindVertexArray(vao);	// make the vao and its vbos active playing the role of the data source
 
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	// draw two triangles forming a quad
-	}
-};
+			mat4 MVPTransform = camera.V() * camera.P();
 
-class Biker {
-	GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
-	std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
-	vec2			    wTranslate;
-	vec2 center, drawingcentre;
-	float radius;
-	vec4 offset = vec4(0, 0, 0, 0);
-	float rotate = 0;
-	Orientation orientation = right;
-	KochanekBartelsSpline* kb;
-	float CalculateRotation(vec2 asd) {
-		float circumference = 2 * radius * M_PI;
-		float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
-		return -2 * M_PI*motion / circumference;
-	}
-public:
-	void setSpline(KochanekBartelsSpline* kb) {
-		this->kb = kb;
-	}
-	void moveCenterByVec(vec2 asd) {
-		/*
-		orientation = asd.x > 0 ? right : left;
-		center = center + asd;
-		center.y = kb->calculateY(center.x)+0.69f;
-		rotate += orientation*CalculateRotation(asd);*/
-		printf("center: %f, %f\n", center.x, center.y);
+			// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
+			MVPTransform.SetUniform(backGroundMaker.getId(), "MVP");
 
-		orientation = asd.x > 0 ? right : left;
-		int ori = orientation;
-		center = center + asd;
-		float derivative = orientation * kb->CalculateDeriative(center.x);
-		printf("deriative: %f\n", derivative);
-		float alpha = atanf(derivative);
-		vec2 N = vec2(-sinf(alpha), cosf(alpha));
-		float denim = sqrtf(N.x*N.x + N.y * N.y);
-		printf("denim: %f\n", denim);
-		//N.x = N.x / denim;
-		//N.y = N.y / denim;
-		N = N * (1 / denim);
-		printf("alpha:%f, N: %f, %f\n", alpha, N.x, N.y);
+
+
+
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	// draw two triangles forming a quad
+		}
+	};
+
+	class Biker {
+		GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
+		std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
+		vec2			    wTranslate;
+		vec2 center, drawingcentre;
+		float radius;
+		vec4 offset = vec4(0, 0, 0, 0);
+		float rotate = 0;
+		Orientation orientation = right;
+		KochanekBartelsSpline* kb;
+		float CalculateRotation(vec2 asd) {
+			float circumference = 2 * radius * M_PI;
+			float motion = sqrtf(powf(asd.x, 2) + powf(asd.y, 2));
+			return -2 * M_PI*motion / circumference;
+		}
+	public:
+		void setSpline(KochanekBartelsSpline* kb) {
+			this->kb = kb;
+		}
+		void moveCenterByVec(vec2 asd) {
+			/*
+			orientation = asd.x > 0 ? right : left;
+			center = center + asd;
+			center.y = kb->calculateY(center.x)+0.69f;
+			rotate += orientation*CalculateRotation(asd);*/
+
+			fixOrientation(asd);
+			printf("center: %f, %f\n", center.x, center.y);
+			fixCentreY();
+			int ori = orientation;
+			center = center + asd;
+			float derivative = orientation * kb->CalculateDeriative(center.x);
+			printf("deriative: %f\n", derivative);
+			float alpha = atanf(derivative);
+			vec2 N = vec2(-sinf(alpha), cosf(alpha));
+			float denim = sqrtf(N.x*N.x + N.y * N.y);
+
+			printf("denim: %f\n", denim);
+			//N.x = N.x / denim;
+			//N.y = N.y / denim;
+			N = N * (1 / denim);
+			printf("alpha:%f, N: %f, %f\n", alpha, N.x, N.y);
+			if (N.y < 0 && (center + (N * radius)).y < kb->calculateY((center + (N * radius)).x)) {
+				N = N * (-1);
+				printf("egyik\n");
+			}
+			if (orientation != right && N.x < 0) {
+				N.x = N.x * (-1);
+				printf("masik\n");
+			}
+			if ((orientation == left && derivative < 0 && N.x > 0)){
+				N.x = N.x * (-1);
+				printf("harmadik\n");
+			}
 
 		drawingcentre = center + (N * radius);
-
+		
 		//center.y = kb->calculateY(center.x) + 0.69f;
-		wTranslate = wTranslate + asd;
+		//wTranslate = wTranslate + asd;
 		rotate += orientation * CalculateRotation(asd);
 	}
 
@@ -580,8 +594,8 @@ public:
 
 
 		radius = 0.8f;
-		drawingcentre = vec2(2.4+radius, -2.45f);
-		center = vec2(2.4, -2.45f);
+		drawingcentre = vec2(2.4, -2.4);
+		center = vec2(2.4, -2.4f-radius);
 		makeCircle();
 		makekullok();
 		makeBody();
@@ -594,7 +608,7 @@ public:
 		float alpha = atanf(derivative);
 		vec2 V = vec2(cosf(alpha), sinf(alpha));
 		float denim = sqrtf(V.x*V.x + V.y * V.y);
-		V = V * (1 / (200*denim));
+		V = V * (1 / (300*denim));
 		float rho = 0.5f;
 		float v = (F - m * g*sin(alpha)) / rho;
 		printf("v*V:%f, %f\n", (V*v).x, (V*v).y);
@@ -610,14 +624,42 @@ public:
 		float alpha = atanf(derivative);
 		vec2 V = vec2(-cosf(alpha), sinf(alpha));
 		float denim = sqrtf(V.x*V.x + V.y * V.y);
-		V = V * (1 / (200 * denim));
+		V = V * (1 / (300 * denim));
 		float rho = 0.5f;
 		float v = (F - m * g*sin(alpha)) / rho;
 		printf("v*V:%f, %f\n", (V*v).x, (V*v).y);
 		moveCenterByVec(V*v);
 	}
 
+	void fixCentreY() {
+		center.y = kb->calculateY(center.x);
+		float derivative = orientation * kb->CalculateDeriative(center.x);
+		printf("deriative: %f\n", derivative);
+		float alpha = atanf(derivative);
+		vec2 N = vec2(-sinf(alpha), cosf(alpha));
+		float denim = sqrtf(N.x*N.x + N.y * N.y);
 
+		printf("denim: %f\n", denim);
+		//N.x = N.x / denim;
+		//N.y = N.y / denim;
+		N = N * (1 / denim);
+		printf("alpha:%f, N: %f, %f\n", alpha, N.x, N.y);
+		if (N.y < 0) {
+			N = N * (-1);
+		}
+
+		drawingcentre = center + (N * radius);
+
+		//center.y = kb->calculateY(center.x) + 0.69f;
+		//wTranslate = wTranslate + asd;
+	}
+
+	void fixOrientation(vec2 asd) {
+		Orientation tempOri = asd.x > 0 ? right : left;
+		if (tempOri != orientation)
+			fixCentreY();
+		orientation = tempOri;
+	}
 	mat4 M() {
 		return mat4(1, 0, 0, 0,
 			0, 1, 0, 0,
