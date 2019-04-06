@@ -187,6 +187,16 @@ int compareVec4ByX(const void* v1, const void* v2) {
 	return -1;
 }
 
+float yOfHermiteFunc(const vec4& p0, const vec4& v0, float t0, const vec4& p1,
+	const vec4& v1, const float t1, const float t) {
+	float delta = t1 - t0;
+	float res =   (((p0 - p1) * 2 / (delta*delta*delta) + (v1 + v0) / (delta*delta)) * ((t - t0)*(t - t0)*(t - t0))
+				+ ((p1 - p0) * 3 / (delta*delta) - (v1 + v0 * 2) / (delta)) * ((t - t0)*(t - t0))
+				+ v0 * (t - t0)
+				+ p0).y;
+	return res;
+}
+
 class KochanekBartelsSpline {
 	unsigned int vaoCurve, vboCurve;
 	unsigned int vaoCtrlPoints, vboCtrlPoints;
@@ -249,7 +259,7 @@ public:
 			std::vector<float> vertexData;
 			for (int x = 0; x < 400; x++) {
 				const float i = ((float)x / 20.0f) - 10.0f;
-				vec4 wVertex(i, calculateY(i), 0, 1);
+				vec4 wVertex(i, calculateYnew(i), 0, 1);
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(wVertex.y);
 				vertexData.push_back(wVertex.x);
@@ -317,6 +327,61 @@ public:
 		res += H3((x - actual->x) / deltaI)  *  TiI;
 		return res;
 
+	}
+
+	float calculateYnew(const float x) {
+
+		vec4* leftside = &wCtrlPoints[0];
+		vec4* actual = &wCtrlPoints[1];
+		vec4* rightside = nullptr;
+		vec4* toTheToRight = nullptr;
+		for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
+			if (wCtrlPoints[i].x > x) {
+				leftside = &wCtrlPoints[i - 2];
+				actual = &wCtrlPoints[i - 1];
+				rightside = &wCtrlPoints[i];
+				toTheToRight = &wCtrlPoints[i + 1];
+				break;
+			}
+
+		}
+		//float res;
+		// t az x, f a helyvektor
+		
+		const vec4 v0 = ((*rightside - *actual) / (rightside->x - actual->x) +
+						(*actual - *leftside) / (actual->x - leftside->x))  *  (1 - tension ) / 2.0f;
+		
+	/*	const vec4 v0 = (*actual - *leftside) / (actual->x / leftside->x) *
+						(1 - tension) * (1 + continuity) * (1 + bias) / 2 +
+						(*rightside - *actual) / (rightside->x - actual->x)*
+						(1 - tension) * (1 - continuity) * (1 - bias) / 2;*/
+		
+		const vec4 v1 = ((*toTheToRight - *rightside) / (toTheToRight->x - rightside->x) + 
+						(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
+	/*	const vec4 v1 = (*rightside - *actual) / (rightside->x - actual->x) *
+						(1 - tension) * (1 - continuity) * (1 + bias) / 2 +
+						(*toTheToRight - *rightside) / (toTheToRight->x - rightside->x) *
+						(1 - tension) * (1 + continuity) * (1 - bias) / 2;*/
+
+
+	/*	const vec4 a0 = *leftside;
+		const vec4 a1 = v0;
+		const vec4 a2 = ((*rightside - *actual) * 3 / powf((rightside->x - actual->x), 2)) - ((v1 + v0 * 2) / (rightside->x - actual->x));
+		const vec4 a3 = ((*actual - *rightside) * 2 / powf((rightside->x - actual->x), 3)) + ((v1 + v0) / powf((rightside->x - actual->x), 2));
+		const float param = x - actual->x;
+		return (a3* param * param * param + a2 * param * param + a1 * param + a0).y; */
+		return yOfHermiteFunc(*actual, v0, actual->x, *rightside, v1, rightside->x, x);
+
+		/*float res = (((p0 - p1) * 2 / (delta*delta*delta) + (v1 + v0) / (delta*delta)) * ((t - t0)*(t - t0)*(t - t0))
+			+ ((p1 - p0) * 3 / (delta*delta) - (v1 + v0 * 2) / (delta)) * ((t - t0)*(t - t0))
+			+ v0 * (t - t0)
+			+ p0).y;*/
+		float Dt = rightside->x - leftside->x;
+		float res = (((*actual - *rightside) * 2 / powf(Dt,3) + (v1 + v0) / powf(Dt, 2)) * ((x - actual->x)*(x - actual->x)*(x - actual->x))
+			+ ((*rightside - *actual) * 3 / powf(Dt, 2) - (v1 + v0 * 2) / (Dt)) * ((x - actual->x)*(x - actual->x))
+			+ v0 * (x - actual->x)
+			+ *actual).y;
+		return res;
 	}
 
 
@@ -896,8 +961,6 @@ void onKeyboardUp(unsigned char key, int pX, int pY) {
 
 // Move mouse with key pressed
 void onMouseMotion(int pX, int pY) {	// pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-
-
 }
 
 // Mouse click event
