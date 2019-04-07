@@ -307,18 +307,45 @@ public:
 						(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
 		const float Dt = rightside->x - actual->x;
 		const float dt = x - actual->x;
-		const float res = (((*actual - *rightside) * 2 / powf(Dt,3) + (v1 + v0) / (Dt*Dt)) * powf(dt, 3)
-					+ ((*rightside - *actual) * 3 / powf(Dt,2) - (v1 + v0 * 2) / Dt) * powf(dt,2)
-					+ v0 * dt + *actual).y;
+		const vec4 a3 = ((*actual - *rightside) * 2 / powf(Dt, 3) + (v1 + v0) / powf(Dt, 2));
+		const vec4 a2 = ((*rightside - *actual) * 3 / powf(Dt, 2) - (v1 + v0 * 2) / Dt);
+		const vec4 a1 = v0;
+		const vec4 a0 = *actual;
+		const float res = ( a3* powf(dt, 3) + a2 * powf(dt,2) + a1 * dt + a0).y;
 		return res;
 		
 	}
 
 
 	float CalculateDeriative(const float x) {
-		float y = calculateY(x);
-		float yp1 = calculateY(x + 0.01f);
-		return -(yp1 - y) / (x - (x + 0.01f));
+		vec4* leftside = &wCtrlPoints[0];
+		vec4* actual = &wCtrlPoints[1];
+		vec4* rightside = nullptr;
+		vec4* toTheToRight = nullptr;
+		for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
+			if (wCtrlPoints[i].x > x) {
+				leftside = &wCtrlPoints[i - 2];
+				actual = &wCtrlPoints[i - 1];
+				rightside = &wCtrlPoints[i];
+				toTheToRight = &wCtrlPoints[i + 1];
+				break;
+			}
+
+		}
+
+		const vec4 v0 = ((*rightside - *actual) / (rightside->x - actual->x) +
+			(*actual - *leftside) / (actual->x - leftside->x))  *  (1 - tension) / 2.0f;
+
+		const vec4 v1 = ((*toTheToRight - *rightside) / (toTheToRight->x - rightside->x) +
+			(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
+		const float Dt = rightside->x - actual->x;
+		const float dt = x - actual->x;
+		const vec4 a3 = ((*actual - *rightside) * 2 / powf(Dt, 3) + (v1 + v0) / powf(Dt, 2));
+		const vec4 a2 = ((*rightside - *actual) * 3 / powf(Dt, 2) - (v1 + v0 * 2) / Dt);
+		const vec4 a1 = v0;
+		const vec4 a0 = *actual;
+		const float res = ( a3 * 3 * powf(dt, 2) + a2* 2 * dt + a1).y;
+		return res;
 	}
 };
 KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b) :
