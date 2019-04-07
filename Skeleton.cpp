@@ -78,23 +78,9 @@ const char * fragmentSourceForBackground = R"(
 	#version 330
     precision highp float;
 	
-	//based on: https://www.geometrictools.com/Documentation/KBSplines.pdf?fbclid=IwAR2iQ6uh5bpsYViBN1v0FCzcXLwyGPoqxSWnf-inLvR33F3siG5hP2JD3d8
-
 	in vec2 texCoord;			// variable input: interpolated texture coordinates
 	out vec4 outColor;		// output that goes to the raster memory as told by glBindFragDataLocation
 
-float H0(float s) {
-		return 2*s*s*s - 3*s*s + 1;
-}
-float H1(float s) {
-	return -2 * s*s*s + 3 * s*s ;
-}
-float H2(float s) {
-	return  s*s*s - 2 * s*s + s;
-}
-float H3(float s) {
-	return s*s*s - s*s;
-}
 bool isHill(vec2 Coord){
 	 float tension = 0.85f;
 	 vec4 leftside;
@@ -132,9 +118,7 @@ bool isHill(vec2 Coord){
 		 vec4 a1 = v0;
 		 vec4 a0 = actual;
 		float y = ( a3* pow(dt, 3) + a2 * pow(dt,2) + a1 * dt + a0).y;
-		if(y > Coord.y)
-			return true;
-		return false;
+		return y > Coord.y;
 	}
 
 	void main() {
@@ -196,7 +180,7 @@ int compareVec4ByX(const void* v1, const void* v2) {
 
 class KochanekBartelsSpline {
 	unsigned int vaoCurve, vboCurve;
-	unsigned int vaoCtrlPoints, vboCtrlPoints;
+	//unsigned int vaoCtrlPoints, vboCtrlPoints;
 	std::vector<float> ts;  // knots
 	float tension, bias, continuity;
 	std::vector<vec4> wCtrlPoints;		// coordinates of control points
@@ -236,19 +220,6 @@ public:
 
 		int colorLocation = glGetUniformLocation(gpuProgram.getId(), "color");
 
-		if (wCtrlPoints.size() > 0) {	// draw control points
-			glBindVertexArray(vaoCtrlPoints);
-			glBindBuffer(GL_ARRAY_BUFFER, vboCtrlPoints);
-			glBufferData(GL_ARRAY_BUFFER, wCtrlPoints.size() * 4 * sizeof(float), &wCtrlPoints[0], GL_DYNAMIC_DRAW);
-			if (colorLocation >= 0)
-				glUniform4f(colorLocation, 1.0f, 0.0f, 0.0f,1.0f);
-			glPointSize(10.0f);
-			int location = glGetUniformLocation(gpuProgram.getId(), "color");
-			glUniform4f(location, 1.0f, 0.0f, 0.0f, 0.0f); // 3 floats*/
-			glDrawArrays(GL_POINTS, 0, wCtrlPoints.size());
-		}
-
-
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		glUniform4f(location, 33 / 256.0f, 161 / 256.0f, 30 / 256.0f, 1.0f); // 3 floats
 
@@ -266,8 +237,8 @@ public:
 			glBindVertexArray(vaoCurve);
 			glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
 			glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-			if (colorLocation >= 0)
-				glUniform4f(colorLocation, 0.0f, 1.0f, 0.0f,1.0f);
+		/*	if (colorLocation >= 0)
+				glUniform4f(colorLocation, 0.0f, 1.0f, 0.0f,1.0f);*/
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 800);
 
 		}
@@ -362,32 +333,11 @@ KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b) :
 	// Map attribute array 0 to the vertex data of the interleaved vbo
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
 
-	// Control Points
-	glGenVertexArrays(1, &vaoCtrlPoints);
-	glBindVertexArray(vaoCtrlPoints);
 
-	glGenBuffers(1, &vboCtrlPoints); // Generate 1 vertex buffer object
-	glBindBuffer(GL_ARRAY_BUFFER, vboCtrlPoints);
-	// Enable the vertex attribute arrays
-	glEnableVertexAttribArray(0);  // attribute array 0
-	// Map attribute array 0 to the vertex data of the interleaved vbo
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
-
-	addSomeControlPoints(-3.2f);
+	addSomeControlPoints(-1.2f);
 }
 
-float KochanekBartelsSpline::H0(float s) {
-	return 2.0f * s*s*s - 3.0f * s*s + 1.0f;
-}
-float KochanekBartelsSpline::H1(float s) {
-	return -2.0f * s*s*s + 3.0f * s*s;
-}
-float KochanekBartelsSpline::H2(float s) {
-	return  s * s*s - 2.0f * s*s + s;
-}
-float KochanekBartelsSpline::H3(float s) {
-	return s * s*s - s * s;
-}
+
 
 KochanekBartelsSpline* kb;
 
