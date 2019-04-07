@@ -140,13 +140,13 @@ enum  Orientation {
 
 const float PI = 3.1415926535897f;
 const float appliedZoom = 0.7f;
-GPUProgram gpuProgram; // vertex and fragment shaders
+GPUProgram gpuProgram; 
 GPUProgram backGroundMaker;
-unsigned int vao;	   // virtual world on the GPU
+unsigned int vao;	  
 
 class Camera2D {
-	vec2 wCenter; // center in world coordinates
-	vec2 wSize;   // width and height in world coordinates
+	vec2 wCenter; 
+	vec2 wSize;  
 public:
 	Camera2D() : wCenter(0.0f, 0.0f), wSize(20.0f, 20.0f) { }
 	void setCentre(vec2 newcentre) {
@@ -162,7 +162,7 @@ public:
 	void Pan(vec2 t) { wCenter = wCenter + t; }
 };
 
-Camera2D camera;		// 2D camera
+Camera2D camera;		
 
 int compareVec4ByX(const void* v1, const void* v2){
 	const float x1 = (float)((vec4*)v1)->x;
@@ -174,10 +174,8 @@ int compareVec4ByX(const void* v1, const void* v2){
 
 class KochanekBartelsSpline {
 	unsigned int vaoCurve, vboCurve;
-	//unsigned int vaoCtrlPoints, vboCtrlPoints;
-	std::vector<float> ts;  // knots
 	float tension, bias, continuity;
-	std::vector<vec4> wCtrlPoints;		// coordinates of control points
+	std::vector<vec4> wCtrlPoints;
 public:
 	KochanekBartelsSpline(float t, float c, float b );
 
@@ -193,14 +191,12 @@ public:
 	}
 
 	void AddControlPoint(float cX, float cY) {
-		ts.push_back((float)wCtrlPoints.size());
 		vec4 wVertex = vec4(cX, cY, 0.0f, 1.0f) * camera.Pinv() * camera.Vinv();
 		wCtrlPoints.push_back(wVertex);
 		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
 	}
 
 	void AddControlPointByCord(float cX, float cY) {
-		ts.push_back((float)wCtrlPoints.size());
 		vec4 wVertex = vec4(cX, cY, 0.0f, 1.0f);
 		wCtrlPoints.push_back(wVertex);
 		qsort(&wCtrlPoints[0], wCtrlPoints.size(), sizeof(vec4), compareVec4ByX);
@@ -209,9 +205,9 @@ public:
 
 	void Draw() {
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
-		glUniform4f(location, 33 / 256.0f, 161 / 256.0f, 30 / 256.0f, 1.0f); // 3 floats
+		glUniform4f(location, 33 / 256.0f, 161 / 256.0f, 30 / 256.0f, 1.0f); 
 
-		if (wCtrlPoints.size() >= 2) {	// draw curve
+		if (wCtrlPoints.size() >= 2) {
 			std::vector<float> vertexData;
 			for (int x = -150; x < 550; x++) {
 				const float i = ((float)x / 20.0f) - 10.0f;
@@ -221,7 +217,7 @@ public:
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(-20.0f);
 			}
-			// copy data to the GPU
+
 			glBindVertexArray(vaoCurve);
 			glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
 			glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
@@ -229,6 +225,7 @@ public:
 
 		}
 	}
+
 
 	float calculateY(const float x) {
 
@@ -244,7 +241,6 @@ public:
 				toTheToRight = &wCtrlPoints[i + 1];
 				break;
 			}
-
 		}
 		if (rightside == nullptr)
 			return 0;
@@ -277,13 +273,13 @@ public:
 				toTheToRight = &wCtrlPoints[i + 1];
 				break;
 			}
-
 		}
 		const vec4 v0 = ((*rightside - *actual) / (rightside->x - actual->x) +
 			(*actual - *leftside) / (actual->x - leftside->x))  *  (1 - tension) / 2.0f;
 
 		const vec4 v1 = ((*toTheToRight - *rightside) / (toTheToRight->x - rightside->x) +
 						(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
+
 		const float Dt = rightside->x - actual->x;
 		const float dt = x - actual->x;
 		const vec4 a3 = ((*actual - *rightside) * 2 / powf(Dt, 3) + (v1 + v0) / powf(Dt, 2));
@@ -298,23 +294,15 @@ KochanekBartelsSpline::KochanekBartelsSpline(float t, float c, float b) :
 	tension(t), continuity(c), bias(b) {
 	glGenVertexArrays(1, &vaoCurve);
 	glBindVertexArray(vaoCurve);
-
-	glGenBuffers(1, &vboCurve); // Generate 1 vertex buffer object
+	glGenBuffers(1, &vboCurve); 
 	glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
-	// Enable the vertex attribute arrays
-	glEnableVertexAttribArray(0);  // attribute array 0
-	// Map attribute array 0 to the vertex data of the interleaved vbo
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL); // attribute array, components/attribute, component type, normalize?, stride, offset
-
+	glEnableVertexAttribArray(0);  
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL); 
 
 	addSomeControlPoints(-1.2f);
 }
 
-
-
 KochanekBartelsSpline* kb;
-
-
 
 void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GLuint vbo) {
 	tarolo.push_back(x);
@@ -324,21 +312,16 @@ void addPointToBuffer(float x, float y, std::vector<float> &tarolo, vec3 rgb, GL
 	tarolo.push_back(rgb.z);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, tarolo.size() * sizeof(float), &tarolo[0], GL_DYNAMIC_DRAW);
-
 }
 
 class Biker {
-	GLuint				vao, kullovao, vbo, kullovbo, vaobody, vbobody;	// vertex array object, vertex buffer object
-	std::vector<float>  vertexData, kullodata, bodydata; // interleaved data of coordinates and colors
-	vec2			    wTranslate;
-	vec2 shoulderCenter;
-	vec2 center, drawingcentre;
-	float radius;
-	vec4 offset = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-	float rotate = 0.0f;
+	GLuint vao, kullovao, vbo, kullovbo, vaobody, vbobody;	
+	std::vector<float>  vertexData, kullodata, bodydata; 
+	vec2 wTranslate,shoulderCenter,center, drawingcentre;
+	float radius, rotate = 0.0f, timePassedSinceStart = 0.0f;
+	const float F = 18.0f, m = 1.0f, g = 9.8f, rho = 0.8f, thighBoneLength = 1.6f, shinBoneLength = 1.7f;
 	Orientation orientation = right;
 	KochanekBartelsSpline* kb;
-	float timePassedSinceStart = 0.0f;
 
 	float CalculateRotation(vec2 asd) {
 		float circumference = 2.0f * radius * PI;
@@ -346,14 +329,12 @@ class Biker {
 		return -2.0f * PI*motion / circumference;
 	}
 public:
-	Biker() {
-
-	}
+	Biker() {}
+	
 	void setSpline(KochanekBartelsSpline* kb) {
 		this->kb = kb;
 	}
 	void moveCenterByVec(vec2 asd) {
-
 		fixOrientation(asd);
 		fixCentreY();
 		center = center + asd;
@@ -374,73 +355,54 @@ public:
 		}
 
 		drawingcentre = center + (N * radius);
-
 		rotate += orientation * CalculateRotation(asd);
 	}
 
-
-
 	void Create() {
-
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
+		glGenBuffers(1, &vbo); 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		// Enable the vertex attribute arrays
-		glEnableVertexAttribArray(0);  // attribute array 0
-		glEnableVertexAttribArray(1);  // attribute array 1
-		// Map attribute array 0 to the vertex data of the interleaved vbo
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
-		// Map attribute array 1 to the color data of the interleaved vbo
+		glEnableVertexAttribArray(0);  
+		glEnableVertexAttribArray(1);  
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); 
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
 
-		// copy data to the GPU
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-
 
 		{
 			glGenVertexArrays(1, &kullovao);
 			glBindVertexArray(kullovao);
-			glGenBuffers(1, &kullovbo); // Generate 1 vertex buffer object
+			glGenBuffers(1, &kullovbo); 
 			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
-			glEnableVertexAttribArray(0);  // attribute array 0
-			glEnableVertexAttribArray(1);  // attribute array 1
-			// Map attribute array 0 to the vertex data of the interleaved vbo
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
+			glEnableVertexAttribArray(0); 
+			glEnableVertexAttribArray(1);  
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); 
 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
-			// copy data to the GPU
 			glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
 			glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
 		}
 		{
 			glGenVertexArrays(1, &vaobody);
 			glBindVertexArray(vaobody);
-			glGenBuffers(1, &vbobody); // Generate 1 vertex buffer object
+			glGenBuffers(1, &vbobody); 
 			glBindBuffer(GL_ARRAY_BUFFER, vbobody);
-			// Enable the vertex attribute arrays
-			glEnableVertexAttribArray(0);  // attribute array 0
-			glEnableVertexAttribArray(1);  // attribute array 1
-			// Map attribute array 0 to the vertex data of the interleaved vbo
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); // attribute array, components/attribute, component type, normalize?, stride, offset
-			// Map attribute array 1 to the color data of the interleaved vbo
+			glEnableVertexAttribArray(0); 
+			glEnableVertexAttribArray(1);  
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0)); 
 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
 
-			// copy data to the GPU
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBufferData(GL_ARRAY_BUFFER, bodydata.size() * sizeof(float), &bodydata[0], GL_DYNAMIC_DRAW);
 		}
 
-
 		radius = 0.8f;
 		center = vec2(2.4f, -1.2f);
 		drawingcentre = vec2(2.4f, center.y + radius);
-		
 	}
-	const float F = 18.0f;
-	const float m = 1.0f;
-	const float g = 9.8f;
-	const float rho = 0.8f;
+
+
 	void moveRight() {
 		float derivative = orientation * kb->CalculateDeriative(center.x);
 		float alpha = atanf(derivative);
@@ -473,7 +435,6 @@ public:
 		if (N.y < 0.0f) {
 			N = N * (-1.0f);
 		}
-
 		drawingcentre = center + (N * radius);
 	}
 
@@ -487,28 +448,21 @@ public:
 		return mat4(1.0f, 0.0f, 0.0f, 0.0f,
 					0.0f, 1.0f, 0.0f, 0.0f,
 					0.0f, 0.0f, 1.0f, 0.0f,
-					wTranslate.x, wTranslate.y, 0.0f, 1.0f); // translation
-	}
-	mat4 Minv() {
-		return mat4(1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			-wTranslate.x, -wTranslate.y, 0, 1); // inverse translation
+					wTranslate.x, wTranslate.y, 0.0f, 1.0f); 
 	}
 	mat4 Mkullok() {
 		return mat4(1.0f, 0.0f, 0.0f, 0.0f,
 					0.0f, 1.0f, 0.0f, 0.0f,
 					0.0f, 0.0f, 1.0f, 0.0f,
-					0.0f, 0.0f, 0.0f, 1.0f); // translation
+					0.0f, 0.0f, 0.0f, 1.0f); 
 	}
-
 
 	void AddPointByCord(float x, float y) {
 		vertexData.push_back(x);
 		vertexData.push_back(y);
-		vertexData.push_back(0.0f); // red
-		vertexData.push_back(0.0f); // green
-		vertexData.push_back(0.0f); // blue
+		vertexData.push_back(0.0f); 
+		vertexData.push_back(0.0f); 
+		vertexData.push_back(0.0f); 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
 	}
@@ -540,7 +494,6 @@ public:
 	}
 
 	void makeHead() {
-
 		vec2 headcentre = vec2(shoulderCenter.x, shoulderCenter.y + 0.4f);
 		for (float i = -PI/2.0f; i <= 1.5f*PI + 0.001f; i += PI / 14.0f) {
 			addPointToBuffer(headcentre.x + 0.4f* cosf(i), headcentre.y + 0.4f*sinf(i), bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
@@ -568,8 +521,7 @@ public:
 		addPointToBuffer(drawingcentre.x, drawingcentre.y + 2.18f, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
 	}
 
-	const float thighBoneLength = 1.6f;
-	const float shinBoneLength = 1.7f;
+	
 	
 	void makeLeg(const Orientation leg) {
 		//based on: https://gist.github.com/jupdike/bfe5eb23d1c395d8a0a1a4ddd94882ac
@@ -613,17 +565,12 @@ public:
 		clearPreviousData();
 		glUniform4f(location, 0.0f, 0.0f, 0.0f, 1.0f);
 		makeCircle();
-
-		/*mat4 MVPTransform = Mkullok() * camera.V() * camera.P();
-		MVPTransform.SetUniform(gpuProgram.getId(), "MVP");*/
 		glBindVertexArray(vao);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glDrawArrays(GL_LINE_LOOP, 0, vertexData.size() / 5);
 
 
 		makekullok();
-		//MVPTransform = Mkullok() * camera.V() * camera.P();
-		//MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 		glBindVertexArray(kullovao);
 		glBindBuffer(GL_ARRAY_BUFFER, kullovbo);
 		glBufferData(GL_ARRAY_BUFFER, kullodata.size() * sizeof(float), &kullodata[0], GL_DYNAMIC_DRAW);
@@ -631,8 +578,6 @@ public:
 
 
 		makeBody();
-		//MVPTransform = Mkullok() * camera.V() * camera.P();
-		//MVPTransform.SetUniform(gpuProgram.getId(), "MVP");
 		glBindVertexArray(vaobody);
 		glBindBuffer(GL_ARRAY_BUFFER, vbobody);
 		glDrawArrays(GL_LINE_STRIP, 0, bodydata.size() / 5);
@@ -697,40 +642,34 @@ public:
 		vertices[3] = vec2(-20.0f, 20.0f);  uvs[3] = vec2(0.0f, 1.0f);
 	}
 	void Create() {
-		glGenVertexArrays(1, &vao);	// create 1 vertex array object
-		glBindVertexArray(vao);		// make it active
-		glGenBuffers(2, vbo);	// Generate 1 vertex buffer objects
-		// vertex coordinates: vbo[0] -> Attrib Array 0 -> vertexPosition of the vertex shader
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // make it active, it is an array
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	   // copy to that part of the memory which will be modified 
-		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);		
+		glGenBuffers(2, vbo);	
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); 
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);	  
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);    
 
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
-		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	   // copy to that part of the memory which is not modified 
-		// Map Attribute Array 0 to the current bound vertex buffer (vbo[0])
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); 
+		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);	  
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     
 	}
 
 	mat4 BikeFollowingMatrice() {
 		return mat4(1.0f*appliedZoom,				 0.0f,							0.0f, 0.0f,
 					0.0f,							 1.0f*appliedZoom,				0.0f, 0.0f,
 					0.0f,					         0.0f,							1.0f, 0.0f,
-					biker.getCentre().x / 10.0f,     biker.getCentre().y / 10.0f,   0.0f, 1.0f); // translation
+					biker.getCentre().x / 10.0f,     biker.getCentre().y / 10.0f,   0.0f, 1.0f); 
 	}
 	void Draw() {
-		glBindVertexArray(vao);	// make the vao and its vbos active playing the role of the data source
+		glBindVertexArray(vao);	
 
 		mat4 MVPTransform = camera.V() * camera.P();
 		if (FollowingBike)
 			MVPTransform = MVPTransform * BikeFollowingMatrice();
-		// set GPU uniform matrix variable MVP with the content of CPU variable MVPTransform
 		MVPTransform.SetUniform(backGroundMaker.getId(), "MVP");
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	// draw two triangles forming a quad
-		 int location = glGetUniformLocation(backGroundMaker.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-		//glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);	
 	}
 };
 
@@ -743,59 +682,41 @@ void onInitialization() {
 	quad.Create();
 	gpuProgram.Create(vertexSource, fragmentSource, "outColor");
 	gpuProgram.Use();
-	glLineWidth(2.0f); // Width of lines in pixels
+	glLineWidth(2.0f); 
 	kb = new KochanekBartelsSpline(-1.0f, 0.0f, 0.0f);
 	biker.Create();
 	biker.setSpline(kb);
 
-// Create objects by setting up their vertex data on the GPU
 
-	glGenVertexArrays(1, &vao);	// get 1 vao id
-	glBindVertexArray(vao);		// make it active
+	glGenVertexArrays(1, &vao);	
+	glBindVertexArray(vao);		
 
-	unsigned int vbo;		// vertex buffer object
-	glGenBuffers(1, &vbo);	// Generate 1 buffer
+	unsigned int vbo;		
+	glGenBuffers(1, &vbo);	
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	// Geometry with 24 bytes (6 floats or 3 x 2 coordinates)
 
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-
-	glEnableVertexAttribArray(0);  // AttribArray 0
-	glVertexAttribPointer(0,       // vbo -> AttribArray 0
-		2, GL_FLOAT, GL_FALSE, // two floats/attrib, not fixed-point
-		0, NULL); 		     // stride, offset: tightly packed
-
-	// create program for the GPU  fragmentSourceForBackground
+	glEnableVertexAttribArray(0);  
+	glVertexAttribPointer(0,2, GL_FLOAT, GL_FALSE, 0, NULL); 		     
 	glutPostRedisplay();
 }
 
 
-// Window has become invalid: Redraw
 void onDisplay() {
-	glClearColor(159.0f / 256.0f, 207.0f / 256.0f, 230.0f / 256.0f, 0.98f);     // background color
-	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
+	glClearColor(159.0f / 256.0f, 207.0f / 256.0f, 230.0f / 256.0f, 0.98f);
+	glClear(GL_COLOR_BUFFER_BIT); 
 
-	// Set color to (0, 1, 0) = green
 	int location = glGetUniformLocation(gpuProgram.getId(), "color");
-	glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f); // 3 floats
+	glUniform4f(location, 1.0f, 1.0f, 0.0f, 1.0f); 
 
-	float MVPtransf[4][4] = { 1.0f, 0.0f, 0.0f, 0.0f,    // MVP matrix, 
-							  0.0f, 1.0f, 0.0f, 0.0f,    // row-major!
+	float MVPtransf[4][4] = { 1.0f, 0.0f, 0.0f, 0.0f,    
+							  0.0f, 1.0f, 0.0f, 0.0f,    
 							  0.0f, 0.0f, 1.0f, 0.0f,
 							  0.0f, 0.0f, 0.0f, 1.0f };
 
-	/*location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
-	printf("location2:%d\n", location);
-	location = glGetUniformLocation(backGroundMaker.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location*/
-
-
-	glBindVertexArray(vao);  // Draw call
-	//glDrawArrays(GL_TRIANGLES, 0 /*startIdx*/, 3 /*# Elements*/);
+	glBindVertexArray(vao);  
+	
 	if (FollowingBike)
 		camera.setCentre(biker.getCentre());
-
 
 	backGroundMaker.Use();
 	quad.Draw();
@@ -804,11 +725,9 @@ void onDisplay() {
 	VPTransform.SetUniform(gpuProgram.getId(), "MVP");
 	kb->Draw();
 	biker.Draw();
-	glutSwapBuffers(); // exchange buffers for double buffering
+	glutSwapBuffers(); 
 
 }
-const unsigned char spaceBar = 32;
-// Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
 		biker.moveRight();
@@ -822,7 +741,7 @@ void onKeyboard(unsigned char key, int pX, int pY) {
 		biker.moveLeft();
 		glutPostRedisplay();
 	}
-	if (key == spaceBar) {
+	if (key == ' ') {
 		if (!FollowingBike) {
 			camera.Zoom(appliedZoom);
 		}
@@ -837,18 +756,15 @@ void onKeyboard(unsigned char key, int pX, int pY) {
 	}
 }
 
-// Key of ASCII code released
 void onKeyboardUp(unsigned char key, int pX, int pY) {
 }
 
-// Move mouse with key pressed
-void onMouseMotion(int pX, int pY) {	// pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
+void onMouseMotion(int pX, int pY) {
 }
 
-// Mouse click event
-void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {  // GLUT_LEFT_BUTTON / GLUT_RIGHT_BUTTON and GLUT_DOWN / GLUT_UP
-		float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
+void onMouse(int button, int state, int pX, int pY) { 
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) { 
+		float cX = 2.0f * pX / windowWidth - 1;	
 		float cY = 1.0f - 2.0f * pY / windowHeight;
 		kb->AddControlPoint(cX, cY);
 		glutPostRedisplay();
