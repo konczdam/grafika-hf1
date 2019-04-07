@@ -31,7 +31,6 @@
 // negativ elojellel szamoljak el es ezzel parhuzamosan eljaras is indul velem szemben.
 //=============================================================================================
 #include "framework.h"
-// vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
 const char * const vertexSource = R"(
 	#version 330				// Shader 3.3
 	precision highp float;		// normal floats, makes no difference on desktop computers
@@ -44,7 +43,6 @@ const char * const vertexSource = R"(
 	}
 )";
 
-// fragment shader in GLSL
 const char * const fragmentSource = R"(
 	#version 330			// Shader 3.3
 	precision highp float;	// normal floats, makes no difference on desktop computers
@@ -166,14 +164,10 @@ public:
 
 Camera2D camera;		// 2D camera
 
-int compareVec4ByX(const void* v1, const void* v2) {
-	float x1 = (float)((vec4*)v1)->x;
-	float x2 = (float)((vec4*)v2)->x;
-	if (x2 < x1)
-		return 1;
-	if (x2 == x1)
-		return 0;
-	return -1;
+int compareVec4ByX(const void* v1, const void* v2){
+	const float x1 = (float)((vec4*)v1)->x;
+	const float x2 = (float)((vec4*)v2)->x;
+	return x2 < x1 ? 1 : x2 == x1 ? 0 : -1;
 }
 
 
@@ -184,20 +178,18 @@ class KochanekBartelsSpline {
 	std::vector<float> ts;  // knots
 	float tension, bias, continuity;
 	std::vector<vec4> wCtrlPoints;		// coordinates of control points
-	float H0(float);
-	float H1(float);
-	float H2(float);
-	float H3(float);
 public:
 	KochanekBartelsSpline(float t, float c, float b );
 
 	void addSomeControlPoints(float y) {
-		AddControlPointByCord(-19.0f, y);
+		AddControlPointByCord(-119.0f, y);
+		AddControlPointByCord(-117.0f, y);
 		AddControlPointByCord(-17.0f, y);
 		AddControlPointByCord(-15.0f, y);
 		AddControlPointByCord(15.0f, y);
 		AddControlPointByCord(17.0f, y);
-		AddControlPointByCord(19.0f, y);
+		AddControlPointByCord(117.0f, y);
+		AddControlPointByCord(119.0f, y);
 	}
 
 	void AddControlPoint(float cX, float cY) {
@@ -216,46 +208,27 @@ public:
 
 
 	void Draw() {
-		
-
-		int colorLocation = glGetUniformLocation(gpuProgram.getId(), "color");
-
 		int location = glGetUniformLocation(gpuProgram.getId(), "color");
 		glUniform4f(location, 33 / 256.0f, 161 / 256.0f, 30 / 256.0f, 1.0f); // 3 floats
 
 		if (wCtrlPoints.size() >= 2) {	// draw curve
 			std::vector<float> vertexData;
-			for (int x = 0; x < 400; x++) {
+			for (int x = -150; x < 550; x++) {
 				const float i = ((float)x / 20.0f) - 10.0f;
 				vec4 wVertex(i, calculateY(i), 0, 1);
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(wVertex.y);
 				vertexData.push_back(wVertex.x);
-				vertexData.push_back(-10.0f);
+				vertexData.push_back(-20.0f);
 			}
 			// copy data to the GPU
 			glBindVertexArray(vaoCurve);
 			glBindBuffer(GL_ARRAY_BUFFER, vboCurve);
 			glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), &vertexData[0], GL_DYNAMIC_DRAW);
-		/*	if (colorLocation >= 0)
-				glUniform4f(colorLocation, 0.0f, 1.0f, 0.0f,1.0f);*/
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 800);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 1400);
 
 		}
-
 	}
-	void sortControlpoints() {
-		for (int i = wCtrlPoints.size() - 1; i > 0; i--) {
-			for (int j = 0; j < i - 1; j++) {
-				if (wCtrlPoints[j].x > wCtrlPoints[j + 1].x) {
-					vec4 Temp = wCtrlPoints[j];
-					wCtrlPoints[j] = wCtrlPoints[j + 1];
-					wCtrlPoints[j + 1] = Temp;
-				}
-			}
-		}
-	}
-
 
 	float calculateY(const float x) {
 
@@ -273,7 +246,8 @@ public:
 			}
 
 		}
-		
+		if (rightside == nullptr)
+			return 0;
 		const vec4 v0 = ((*rightside - *actual) / (rightside->x - actual->x) +
 						(*actual - *leftside) / (actual->x - leftside->x))  *  (1 - tension ) / 2.0f;
 		
@@ -287,7 +261,6 @@ public:
 		const vec4 a0 = *actual;
 		const float res = ( a3* powf(dt, 3) + a2 * powf(dt,2) + a1 * dt + a0).y;
 		return res;
-		
 	}
 
 
@@ -460,8 +433,8 @@ public:
 
 
 		radius = 0.8f;
-		drawingcentre = vec2(2.4f, -2.4f);
-		center = vec2(2.4f, -2.4f - radius);
+		center = vec2(2.4f, -1.2f);
+		drawingcentre = vec2(2.4f, center.y + radius);
 		
 	}
 	const float F = 18.0f;
@@ -585,7 +558,7 @@ public:
 		const float c = 2.18f;
 		const float b = fabsf(drawingcentre.x - shoulderCenter.x);
 		const float a = sqrtf(powf(c, 2) - powf(b, 2));
-		shoulderCenter.y = drawingcentre.y + 2.18f + a;// *(PI / 4.0f + (cos(timePassedSinceStart)) / 20);
+		shoulderCenter.y = drawingcentre.y + 2.18f + a;
 		addPointToBuffer(shoulderCenter.x, shoulderCenter.y, bodydata, vec3(0, 0, 0), vbobody);
 	}
 
