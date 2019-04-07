@@ -524,37 +524,26 @@ public:
 	
 	
 	void makeLeg(const Orientation leg) {
-		//based on: https://gist.github.com/jupdike/bfe5eb23d1c395d8a0a1a4ddd94882ac
-
-		float legf = leg == right ? 1.0f : -1.0f;
+		const float legf = leg == right ? 1.0f : -1.0f;
 		const float offset = PI / 2.0f * legf;
 		const vec2 P1 = vec2(drawingcentre.x, drawingcentre.y + 2.2f);
-		const vec2 P2 = vec2(cos(rotate + offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
-		const float R = sqrtf(powf(P2.x - P1.x, 2.0f) + powf(P2.y - P1.y, 2.0f));
-		const float centerDx = P1.x - P2.x;
-		const float centerDy = P1.y - P2.y;
-		const float r = sqrtf(centerDx * centerDx + centerDy * centerDy);
-		const float r2d = r * r;
-		const float r4d = r2d * r2d;
-		const float rThighSquared = thighBoneLength * thighBoneLength;
-		const float rShinSquared = shinBoneLength * shinBoneLength;
-		const float a = (rThighSquared - rShinSquared) / (2 * r2d);
-		const float r2r2 = (rThighSquared - rShinSquared);
-		const float c = sqrtf(2.0f * (rThighSquared + rShinSquared) / r2d - (r2r2 * r2r2) / r4d - 1.0f);
-		const float fx = (P1.x + P2.x) / 2.0f + a * (P2.x - P1.x);
-		const float gx = c * (P2.y - P1.y) / 2.0f;
-		const float ix1 = fx + gx;
-		const float ix2 = fx - gx;
-		const float fy = (P1.y + P2.y) / 2.0f + a * (P2.y - P1.y);
-		const float gy = c * (P1.x - P2.x) / 2.0f;
-		const float iy1 = fy + gy;
-		const float iy2 = fy - gy;
+		const vec2 P0 = vec2(cos(rotate + offset)*radius*0.75f + drawingcentre.x, sin(rotate + offset)*radius*0.75f + drawingcentre.y);
+		const float d = sqrtf(powf(P1.x - P0.x, 2.0f) + powf(P1.y - P0.y, 2.0f));
+		const float r0 = shinBoneLength;
+		const float r1 = thighBoneLength;
+		const float a = (r0*r0 - r1 * r1 + d * d) / (2 * d);
+		const float h = sqrtf(r0*r0 - a * a);
+		
+		const vec2 P2 = P0 + ((P1 - P0)*a) *(1.0f/ d);
 
-		vec2 asd = orientation == right ? vec2(ix2, iy2) : vec2(ix1, iy1);
+		const vec2 V = (P1 - P2)* (1 / sqrtf((P1 - P2).x*(P1 - P2).x + (P1 - P2).y * (P1 - P2).y));
+		const vec2 N = vec2(-V.y, V.x);
 
+		const vec2 asd = orientation == left ? P2 + N * h : P2 - N * h;
+		
 		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
 		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
-		addPointToBuffer(P2.x, P2.y, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
+		addPointToBuffer(P0.x, P0.y, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
 		addPointToBuffer(asd.x, asd.y, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
 		addPointToBuffer(P1.x, P1.y, bodydata, vec3(0.0f, 0.0f, 0.0f), vbobody);
 	}
@@ -731,10 +720,6 @@ void onDisplay() {
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'd') {
 		biker.moveRight();
-		glutPostRedisplay();
-	}
-	if (key == 'w') {
-		biker.animate(0.01f);
 		glutPostRedisplay();
 	}
 	if (key == 'a') {
