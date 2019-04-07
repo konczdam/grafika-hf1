@@ -176,15 +176,7 @@ public:
 	void Zoom(float s) { wSize = wSize * s; }
 	void Pan(vec2 t) { wCenter = wCenter + t; }
 };
-float yOfHermiteFunc(const vec4& p0, const vec4& v0, float t0, const vec4& p1,
-	const vec4& v1, const float t1, const float t) {
-	float delta = t1 - t0;
-	float res = (((p0 - p1) * 2 / (delta*delta*delta) + (v1 + v0) / (delta*delta)) * ((t - t0)*(t - t0)*(t - t0))
-		+ ((p1 - p0) * 3 / (delta*delta) - (v1 + v0 * 2) / (delta)) * ((t - t0)*(t - t0))
-		+ v0 * (t - t0)
-		+ p0).y;
-	return res;
-}
+
 Camera2D camera;		// 2D camera
 
 int compareVec4ByX(const void* v1, const void* v2) {
@@ -261,7 +253,7 @@ public:
 			std::vector<float> vertexData;
 			for (int x = 0; x < 400; x++) {
 				const float i = ((float)x / 20.0f) - 10.0f;
-				vec4 wVertex(i, calculateYnew(i), 0, 1);
+				vec4 wVertex(i, calculateY(i), 0, 1);
 				vertexData.push_back(wVertex.x);
 				vertexData.push_back(wVertex.y);
 				vertexData.push_back(wVertex.x);
@@ -289,49 +281,9 @@ public:
 			}
 		}
 	}
+
+
 	float calculateY(const float x) {
-		//based on: https://www.geometrictools.com/Documentation/KBSplines.pdf?fbclid=IwAR2iQ6uh5bpsYViBN1v0FCzcXLwyGPoqxSWnf-inLvR33F3siG5hP2JD3d8
-		
-		vec4* leftside = &wCtrlPoints[0];
-		vec4* actual = &wCtrlPoints[1];
-		vec4* rightside = nullptr;
-		vec4* toTheToRight = nullptr;
-		for (unsigned int i = 2; i < wCtrlPoints.size() - 2; i++) {
-			if (wCtrlPoints[i].x > x) {
-				leftside = &wCtrlPoints[i - 2];
-				actual = &wCtrlPoints[i - 1];
-				rightside = &wCtrlPoints[i];
-				toTheToRight = &wCtrlPoints[i + 1];
-				break;
-			}
-
-		}
-
-		if (rightside == nullptr) {
-			return -6.2f;
-		}
-
-		float deltaI = rightside->x - actual->x;
-		//Choosing Tangent Vectors
-		//incoming target vector
-		//float TiI = ((1 - tension)*(1 + continuity)*(1 - bias) / 2)*(rightside->y - actual->y) + ((1 - tension)*(1 - continuity)*(1 + bias) / 2)*(actual->y - leftside->y);
-		float TiI = ((1.0f - tension)*(1.0f + continuity)*(1.0f - bias) / 2.0f)*
-			(toTheToRight->y - rightside->y) + ((1.0f - tension)*(1.0f - continuity)*(1.0f + bias) / 2.0f)*(rightside->y - actual->y);
-
-		//outgoing target vec
-		float TiO = ((1.0f - tension)*(1.0f - continuity)*(1.0f - bias) / 2.0f)*(rightside->y - actual->y) +
-			((1.0f - tension)*(1.0f + continuity)*(1.0f + bias) / 2.0f)*(actual->y - leftside->y);
-
-		float res = 0.0f;
-		res += H0((x - actual->x) / deltaI)  *  actual->y;
-		res += H1((x - actual->x) / deltaI)  *  rightside->y;
-		res += H2((x - actual->x) / deltaI)  *  TiO;
-		res += H3((x - actual->x) / deltaI)  *  TiI;
-		return res;
-
-	}
-
-	float calculateYnew(const float x) {
 
 		vec4* leftside = &wCtrlPoints[0];
 		vec4* actual = &wCtrlPoints[1];
@@ -347,41 +299,19 @@ public:
 			}
 
 		}
-		//float res;
-		// t az x, f a helyvektor
 		
 		const vec4 v0 = ((*rightside - *actual) / (rightside->x - actual->x) +
 						(*actual - *leftside) / (actual->x - leftside->x))  *  (1 - tension ) / 2.0f;
 		
-	/*	const vec4 v0 = (*actual - *leftside) / (actual->x / leftside->x) *
-						(1 - tension) * (1 + continuity) * (1 + bias) / 2 +
-						(*rightside - *actual) / (rightside->x - actual->x)*
-						(1 - tension) * (1 - continuity) * (1 - bias) / 2;*/
-		
 		const vec4 v1 = ((*toTheToRight - *rightside) / (toTheToRight->x - rightside->x) + 
 						(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
-		const float Dt = rightside->x - leftside->x;
+		const float Dt = rightside->x - actual->x;
 		const float dt = x - actual->x;
-		/*const float res = (((*actual - *rightside) * 2 / powf(Dt,3)  + (v1 + v0)     / powf(Dt, 2)) * powf(dt,3)
-						+ ((*rightside - *actual) * 3  / powf(Dt, 2) - (v1 + v0 * 2) / (Dt)) * powf(dt, 2)
-						+ v0 * dt + *actual).y;*/
-			vec4 p0 = *actual;
-			vec4 p1 = *rightside;
-			float t = x;
-			float t0 = actual->x;
-			float t1 = rightside->x;
-			float delta = t1 - t0;
-			float res = (((p0 - p1) * 2 / (delta*delta*delta) + (v1 + v0) / (delta*delta)) * ((t - t0)*(t - t0)*(t - t0))
-				+ ((p1 - p0) * 3 / (delta*delta) - (v1 + v0 * 2) / (delta)) * ((t - t0)*(t - t0))
-				+ v0 * (t - t0)
-				+ p0).y;
+		const float res = (((*actual - *rightside) * 2 / powf(Dt,3) + (v1 + v0) / (Dt*Dt)) * powf(dt, 3)
+					+ ((*rightside - *actual) * 3 / powf(Dt,2) - (v1 + v0 * 2) / Dt) * powf(dt,2)
+					+ v0 * dt + *actual).y;
 		return res;
-			return yOfHermiteFunc(*actual, v0, actual->x, *rightside, v1, rightside->x, x);
 		
-		/*float res = (((*actual - *rightside) * 2 / powf(Dt, 3) + (v1 + v0) / powf(Dt, 2)) * ((x - actual->x)*(x - actual->x)*(x - actual->x))
-			+ ((*rightside - *actual) * 3 / powf(Dt, 2) - (v1 + v0 * 2) / (Dt)) * ((x - actual->x)*(x - actual->x))
-			+ v0 * (x - actual->x)
-			+ *actual).y;*/
 	}
 
 
