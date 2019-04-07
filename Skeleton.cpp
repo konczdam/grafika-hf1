@@ -97,22 +97,20 @@ float H3(float s) {
 }
 bool isHill(vec2 Coord){
 	 float tension = 0.85f;
-	 vec2 leftside;
-	 vec2 actual;
-	 vec2 rightside;
-	 vec2 twoToTheRight;
-	    vec2 controlPoints[8]=vec2[8](
-		vec2(-0.1, 0.6),
-		vec2(0.2, 0.7),
-		vec2(0.4,0.45),
-		vec2(0.6,0.7),
-		vec2(0.8,0.65),
-		vec2(1,0.4),
-		vec2(1.2,0.6),
-		vec2(1.4, 0.6)
-		
-);	
-		 float y = 0;
+	 vec4 leftside;
+	 vec4 actual;
+	 vec4 rightside;
+	 vec4 twoToTheRight;
+	    vec4 controlPoints[8]=vec4[8](
+		vec4(-0.1, 0.6, 0, 0),
+		vec4(0.2, 0.7, 0, 0),
+		vec4(0.4,0.45, 0, 0),
+		vec4(0.6,0.7, 0, 0),
+		vec4(0.8,0.65, 0, 0),
+		vec4(1,0.4, 0, 0),
+		vec4(1.2,0.6, 0, 0),
+		vec4(1.4, 0.6, 0, 0)
+	);	
 		for(int i = 1; i < 7; i++){
 			if(controlPoints[i].x > Coord.x){
 				leftside = controlPoints[i-2];
@@ -122,13 +120,18 @@ bool isHill(vec2 Coord){
 				break;
 			}
 		}
-		 float deltaI = rightside.x - actual.x;
-		 float TiI = ((1 - tension) / 2)*(twoToTheRight.y - rightside.y) + ((1 - tension)/ 2)*(rightside.y - actual.y);
-		 float TiO = ((1 - tension)/ 2)*(rightside.y - actual.y) + ((1 - tension)/ 2)*(actual.y - leftside.y);
-		y = H0((Coord.x - actual.x) / deltaI) * actual.y;
-		y += H1((Coord.x - actual.x) / deltaI) * rightside.y;
-		y += H2((Coord.x - actual.x) / deltaI) * TiO;
-		y += H3((Coord.x - actual.x) / deltaI) * TiI ;
+		 vec4 v0 = ((rightside - actual) / (rightside.x - actual.x) +
+						(actual - leftside) / (actual.x - leftside.x))  *  (1 - tension ) / 2.0f;
+		
+		 vec4 v1 = ((twoToTheRight - rightside) / (twoToTheRight.x - rightside.x) + 
+						(rightside - actual) / (rightside.x - actual.x))  * (1 - tension) / 2.0f;
+		 float Dt = rightside.x - actual.x;
+		 float dt = Coord.x - actual.x;
+		 vec4 a3 = ((actual - rightside) * 2 / pow(Dt, 3) + (v1 + v0) / pow(Dt, 2));
+		 vec4 a2 = ((rightside - actual) * 3 / pow(Dt, 2) - (v1 + v0 * 2) / Dt);
+		 vec4 a1 = v0;
+		 vec4 a0 = actual;
+		float y = ( a3* pow(dt, 3) + a2 * pow(dt,2) + a1 * dt + a0).y;
 		if(y > Coord.y)
 			return true;
 		return false;
@@ -332,12 +335,11 @@ public:
 			}
 
 		}
-
 		const vec4 v0 = ((*rightside - *actual) / (rightside->x - actual->x) +
 			(*actual - *leftside) / (actual->x - leftside->x))  *  (1 - tension) / 2.0f;
 
 		const vec4 v1 = ((*toTheToRight - *rightside) / (toTheToRight->x - rightside->x) +
-			(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
+						(*rightside - *actual) / (rightside->x - actual->x))  * (1 - tension) / 2.0f;
 		const float Dt = rightside->x - actual->x;
 		const float dt = x - actual->x;
 		const vec4 a3 = ((*actual - *rightside) * 2 / powf(Dt, 3) + (v1 + v0) / powf(Dt, 2));
