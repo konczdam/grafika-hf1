@@ -15,3 +15,11 @@ A távoli háttér egy procedurálisan textúrázott téglalap, ami az égboltot
 Extrák: Az út mellett tereptárgyak helyezhetők el. A biciklis orientációja fizikailag helyesen úgy változik, hogy a forgatónyomaték zérus legyen.
 
 
+
+#### Screenshots
+
+<img src="Screenshots/onStart.png" width="200">
+
+<img src="Screenshots/after-a-few-clicks.png" width="200">
+
+<img src="Screenshots/onSpacePressed.png" width="200">
